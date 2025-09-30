@@ -1,3 +1,6 @@
+# Development files
+development_files/
+
 # Python
 __pycache__/
 *.py[cod]
