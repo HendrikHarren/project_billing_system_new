@@ -1,0 +1,303 @@
+"""
+Unit tests for configuration management.
+"""
+import os
+import pytest
+from unittest.mock import patch
+from pydantic import ValidationError
+
+from src.config.settings import (
+    BillingSystemConfig,
+    load_config,
+    get_config,
+    reload_config
+)
+
+
+class TestBillingSystemConfig:
+    """Test cases for BillingSystemConfig."""
+
+    def test_config_with_valid_env_vars(self, test_config):
+        """Test configuration loads correctly with valid environment variables."""
+        assert test_config.google_project_id == 'test-project'
+        assert test_config.google_private_key_id == 'test-key-id'
+        assert test_config.google_client_email == 'test@test.com'
+        assert test_config.timesheet_folder_id == 'test-folder-id'
+        assert test_config.environment == 'testing'
+        assert test_config.debug is True
+        assert test_config.log_level == 'DEBUG'
+
+    def test_google_service_account_info(self, test_config):
+        """Test Google service account info generation."""
+        service_account_info = test_config.get_google_service_account_info()
+
+        assert service_account_info['type'] == 'service_account'
+        assert service_account_info['project_id'] == 'test-project'
+        assert service_account_info['private_key_id'] == 'test-key-id'
+        assert service_account_info['client_email'] == 'test@test.com'
+
+    def test_default_values(self, mock_env):
+        """Test default configuration values."""
+        config = BillingSystemConfig(
+            google_project_id='test',
+            google_private_key_id='test',
+            google_private_key='-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n',
+            google_client_email='test@test.com',
+            google_client_id='test',
+            google_client_x509_cert_url='https://test.com',
+            google_subject_email='test@test.com',
+            timesheet_folder_id='test',
+            project_terms_file_id='test',
+            monthly_invoicing_folder_id='test'
+        )
+
+        assert config.environment == 'development'
+        assert config.debug is False
+        assert config.log_level == 'INFO'
+        assert config.batch_size == 10
+        assert config.max_retries == 3
+        assert config.retry_delay == 1.0
+
+    def test_google_scopes_default(self, test_config):
+        """Test default Google API scopes."""
+        expected_scopes = [
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive'
+        ]
+        assert test_config.google_scopes == expected_scopes
+
+    @pytest.mark.parametrize("invalid_key", [
+        "not-a-private-key",
+        "BEGIN PRIVATE KEY",
+        "",
+        "-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----\n"
+    ])
+    def test_invalid_private_key_validation(self, mock_env, invalid_key):
+        """Test private key validation with invalid formats."""
+        with pytest.raises(ValidationError) as exc_info:
+            BillingSystemConfig(
+                google_project_id='test',
+                google_private_key_id='test',
+                google_private_key=invalid_key,
+                google_client_email='test@test.com',
+                google_client_id='test',
+                google_client_x509_cert_url='https://test.com',
+                google_subject_email='test@test.com',
+                timesheet_folder_id='test',
+                project_terms_file_id='test',
+                monthly_invoicing_folder_id='test'
+            )
+
+        assert 'Invalid private key format' in str(exc_info.value)
+
+    @pytest.mark.parametrize("invalid_log_level", [
+        "TRACE",
+        "VERBOSE",
+        "invalid",
+        "123"
+    ])
+    def test_invalid_log_level_validation(self, mock_env, invalid_log_level):
+        """Test log level validation with invalid values."""
+        with pytest.raises(ValidationError) as exc_info:
+            BillingSystemConfig(
+                google_project_id='test',
+                google_private_key_id='test',
+                google_private_key='-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n',
+                google_client_email='test@test.com',
+                google_client_id='test',
+                google_client_x509_cert_url='https://test.com',
+                google_subject_email='test@test.com',
+                timesheet_folder_id='test',
+                project_terms_file_id='test',
+                monthly_invoicing_folder_id='test',
+                log_level=invalid_log_level
+            )
+
+        assert 'Log level must be one of' in str(exc_info.value)
+
+    @pytest.mark.parametrize("valid_log_level,expected", [
+        ("debug", "DEBUG"),
+        ("info", "INFO"),
+        ("WARNING", "WARNING"),
+        ("Error", "ERROR"),
+        ("CRITICAL", "CRITICAL")
+    ])
+    def test_valid_log_level_normalization(self, mock_env, valid_log_level, expected):
+        """Test log level validation with valid values."""
+        config = BillingSystemConfig(
+            google_project_id='test',
+            google_private_key_id='test',
+            google_private_key='-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n',
+            google_client_email='test@test.com',
+            google_client_id='test',
+            google_client_x509_cert_url='https://test.com',
+            google_subject_email='test@test.com',
+            timesheet_folder_id='test',
+            project_terms_file_id='test',
+            monthly_invoicing_folder_id='test',
+            log_level=valid_log_level
+        )
+
+        assert config.log_level == expected
+
+    @pytest.mark.parametrize("invalid_environment", [
+        "staging",
+        "prod",
+        "dev",
+        "test"
+    ])
+    def test_invalid_environment_validation(self, mock_env, invalid_environment):
+        """Test environment validation with invalid values."""
+        with pytest.raises(ValidationError) as exc_info:
+            BillingSystemConfig(
+                google_project_id='test',
+                google_private_key_id='test',
+                google_private_key='-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n',
+                google_client_email='test@test.com',
+                google_client_id='test',
+                google_client_x509_cert_url='https://test.com',
+                google_subject_email='test@test.com',
+                timesheet_folder_id='test',
+                project_terms_file_id='test',
+                monthly_invoicing_folder_id='test',
+                environment=invalid_environment
+            )
+
+        assert 'Environment must be one of' in str(exc_info.value)
+
+    @pytest.mark.parametrize("valid_environment,expected", [
+        ("DEVELOPMENT", "development"),
+        ("Testing", "testing"),
+        ("PRODUCTION", "production")
+    ])
+    def test_valid_environment_normalization(self, mock_env, valid_environment, expected):
+        """Test environment validation with valid values."""
+        config = BillingSystemConfig(
+            google_project_id='test',
+            google_private_key_id='test',
+            google_private_key='-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n',
+            google_client_email='test@test.com',
+            google_client_id='test',
+            google_client_x509_cert_url='https://test.com',
+            google_subject_email='test@test.com',
+            timesheet_folder_id='test',
+            project_terms_file_id='test',
+            monthly_invoicing_folder_id='test',
+            environment=valid_environment
+        )
+
+        assert config.environment == expected
+
+
+class TestConfigurationFunctions:
+    """Test configuration loading functions."""
+
+    def test_load_config_with_env_file(self, tmp_path, test_env_vars):
+        """Test loading configuration from specific env file."""
+        # Create temporary .env file
+        env_file = tmp_path / ".env.test"
+        env_content = "\n".join([f"{k}={v}" for k, v in test_env_vars.items()])
+        env_file.write_text(env_content)
+
+        # Clear any existing config
+        import src.config.settings
+        src.config.settings._config = None
+
+        config = load_config(str(env_file))
+
+        assert config.google_project_id == 'test-project'
+        assert config.environment == 'testing'
+
+    def test_get_config_singleton(self, mock_env):
+        """Test that get_config returns singleton instance."""
+        # Clear any existing config
+        import src.config.settings
+        src.config.settings._config = None
+
+        config1 = get_config()
+        config2 = get_config()
+
+        assert config1 is config2
+        assert config1.google_project_id == 'test-project'
+
+    def test_reload_config(self, mock_env):
+        """Test configuration reload functionality."""
+        # Set initial config
+        import src.config.settings
+        src.config.settings._config = None
+
+        config1 = get_config()
+        assert config1.google_project_id == 'test-project'
+
+        # Change environment variable
+        os.environ['GOOGLE_PROJECT_ID'] = 'new-project-id'
+
+        # Reload config
+        config2 = reload_config()
+
+        assert config2.google_project_id == 'new-project-id'
+        assert config1 is not config2
+
+    def test_missing_required_env_vars(self):
+        """Test behavior when required environment variables are missing."""
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValidationError) as exc_info:
+                load_config()
+
+            # Should fail on missing required fields
+            assert 'field required' in str(exc_info.value)
+
+
+class TestConfigurationEdgeCases:
+    """Test edge cases and error scenarios."""
+
+    def test_config_with_empty_strings(self, mock_env):
+        """Test configuration with empty string values."""
+        with pytest.raises(ValidationError):
+            BillingSystemConfig(
+                google_project_id='',  # Empty string should fail validation
+                google_private_key_id='test',
+                google_private_key='-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n',
+                google_client_email='test@test.com',
+                google_client_id='test',
+                google_client_x509_cert_url='https://test.com',
+                google_subject_email='test@test.com',
+                timesheet_folder_id='test',
+                project_terms_file_id='test',
+                monthly_invoicing_folder_id='test'
+            )
+
+    def test_config_case_insensitive_env_vars(self, mock_env):
+        """Test that environment variable loading is case insensitive."""
+        with patch.dict(os.environ, {'google_project_id': 'lowercase-test'}, clear=False):
+            # Clear existing config
+            import src.config.settings
+            src.config.settings._config = None
+
+            config = load_config()
+            assert config.google_project_id == 'lowercase-test'
+
+    def test_config_validation_comprehensive(self, test_config):
+        """Test that all required configuration fields are present and valid."""
+        # Verify all Google API fields
+        assert test_config.google_project_id
+        assert test_config.google_private_key_id
+        assert test_config.google_private_key.startswith('-----BEGIN PRIVATE KEY-----')
+        assert test_config.google_client_email
+        assert test_config.google_client_id
+        assert test_config.google_subject_email
+
+        # Verify Google Drive/Sheets fields
+        assert test_config.timesheet_folder_id
+        assert test_config.project_terms_file_id
+        assert test_config.monthly_invoicing_folder_id
+
+        # Verify application fields
+        assert test_config.environment in ['development', 'testing', 'production']
+        assert isinstance(test_config.debug, bool)
+        assert test_config.log_level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+
+        # Verify processing fields
+        assert test_config.batch_size > 0
+        assert test_config.max_retries >= 0
+        assert test_config.retry_delay >= 0.0
