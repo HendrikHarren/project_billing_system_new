@@ -167,7 +167,6 @@ class RetryHandler:
                 not self._circuit_breaker_open
                 and self._failure_count >= self.circuit_breaker_threshold
             ):
-
                 logger.warning(
                     f"Circuit breaker opened after {self._failure_count} failures"
                 )

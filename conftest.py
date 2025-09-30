@@ -2,9 +2,11 @@
 Global pytest configuration and fixtures.
 """
 import os
-import pytest
+from typing import Any, Dict
 from unittest.mock import Mock, patch
-from typing import Dict, Any
+
+import pytest
+
 from src.config import BillingSystemConfig, reload_config
 
 
@@ -12,19 +14,19 @@ from src.config import BillingSystemConfig, reload_config
 def test_env_vars() -> Dict[str, str]:
     """Test environment variables for configuration."""
     return {
-        'GOOGLE_PROJECT_ID': 'test-project',
-        'GOOGLE_PRIVATE_KEY_ID': 'test-key-id',
-        'GOOGLE_PRIVATE_KEY': '-----BEGIN PRIVATE KEY-----\ntest-key\n-----END PRIVATE KEY-----\n',
-        'GOOGLE_CLIENT_EMAIL': 'test@test.com',
-        'GOOGLE_CLIENT_ID': 'test-client-id',
-        'GOOGLE_CLIENT_X509_CERT_URL': 'https://test.com/cert',
-        'GOOGLE_SUBJECT_EMAIL': 'test@example.com',
-        'TIMESHEET_FOLDER_ID': 'test-folder-id',
-        'PROJECT_TERMS_FILE_ID': 'test-terms-id',
-        'MONTHLY_INVOICING_FOLDER_ID': 'test-invoicing-id',
-        'ENVIRONMENT': 'testing',
-        'DEBUG': 'true',
-        'LOG_LEVEL': 'DEBUG'
+        "GOOGLE_PROJECT_ID": "test-project",
+        "GOOGLE_PRIVATE_KEY_ID": "test-key-id",
+        "GOOGLE_PRIVATE_KEY": "-----BEGIN PRIVATE KEY-----\ntest-key\n-----END PRIVATE KEY-----\n",
+        "GOOGLE_CLIENT_EMAIL": "test@test.com",
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_CLIENT_X509_CERT_URL": "https://test.com/cert",
+        "GOOGLE_SUBJECT_EMAIL": "test@example.com",
+        "TIMESHEET_FOLDER_ID": "test-folder-id",
+        "PROJECT_TERMS_FILE_ID": "test-terms-id",
+        "MONTHLY_INVOICING_FOLDER_ID": "test-invoicing-id",
+        "ENVIRONMENT": "testing",
+        "DEBUG": "true",
+        "LOG_LEVEL": "DEBUG",
     }
 
 
@@ -36,6 +38,7 @@ def mock_env(test_env_vars, monkeypatch):
 
     # Clear the global config to force reload with test values
     import src.config.settings
+
     src.config.settings._config = None
 
     yield test_env_vars
@@ -53,7 +56,7 @@ def test_config(mock_env) -> BillingSystemConfig:
 @pytest.fixture
 def mock_google_sheets_service():
     """Mock Google Sheets service."""
-    with patch('src.google_auth.build') as mock_build:
+    with patch("src.google_auth.build") as mock_build:
         mock_service = Mock()
         mock_build.return_value = mock_service
         yield mock_service
@@ -62,7 +65,7 @@ def mock_google_sheets_service():
 @pytest.fixture
 def mock_google_drive_service():
     """Mock Google Drive service."""
-    with patch('src.google_auth.build') as mock_build:
+    with patch("src.google_auth.build") as mock_build:
         mock_service = Mock()
         mock_build.return_value = mock_service
         yield mock_service
@@ -72,9 +75,36 @@ def mock_google_drive_service():
 def sample_timesheet_data():
     """Sample timesheet data for testing."""
     return [
-        ['Date', 'Project', 'Location', 'Start Time', 'End Time', 'Topics worked on', 'Break', 'Travel time'],
-        ['2023-01-02', 'P&C_NEWRETAIL', 'Off-site', '09:30', '17:30', 'Development work', '01:00', '00:00'],
-        ['2023-01-03', 'P&C_NEWRETAIL', 'On-site', '08:00', '18:00', 'Client meeting', '01:00', '02:00']
+        [
+            "Date",
+            "Project",
+            "Location",
+            "Start Time",
+            "End Time",
+            "Topics worked on",
+            "Break",
+            "Travel time",
+        ],
+        [
+            "2023-01-02",
+            "P&C_NEWRETAIL",
+            "Off-site",
+            "09:30",
+            "17:30",
+            "Development work",
+            "01:00",
+            "00:00",
+        ],
+        [
+            "2023-01-03",
+            "P&C_NEWRETAIL",
+            "On-site",
+            "08:00",
+            "18:00",
+            "Client meeting",
+            "01:00",
+            "02:00",
+        ],
     ]
 
 
@@ -82,8 +112,16 @@ def sample_timesheet_data():
 def sample_project_terms():
     """Sample project terms data for testing."""
     return [
-        ['Project', 'Consultant_ID', 'Name', 'Rate', 'Cost', 'Share of travel as work', 'surcharge for travel'],
-        ['P&C_NEWRETAIL', 'C001', 'Test Freelancer', '150', '100', '0.5', '0.15']
+        [
+            "Project",
+            "Consultant_ID",
+            "Name",
+            "Rate",
+            "Cost",
+            "Share of travel as work",
+            "surcharge for travel",
+        ],
+        ["P&C_NEWRETAIL", "C001", "Test Freelancer", "150", "100", "0.5", "0.15"],
     ]
 
 
@@ -91,9 +129,9 @@ def sample_project_terms():
 def sample_trip_terms():
     """Sample trip terms data for testing."""
     return [
-        ['Location', 'Trip Duration', 'Trip Reimbursement'],
-        ['Paris On-site', '1', '450'],
-        ['Paris On-site', '2', '650']
+        ["Location", "Trip Duration", "Trip Reimbursement"],
+        ["Paris On-site", "1", "450"],
+        ["Paris On-site", "2", "650"],
     ]
 
 
@@ -103,7 +141,7 @@ def cleanup_test_files():
     yield
 
     # Remove test coverage files in case they're created
-    test_files = ['coverage.xml', '.coverage']
+    test_files = ["coverage.xml", ".coverage"]
     for file in test_files:
         if os.path.exists(file):
             os.remove(file)
@@ -112,18 +150,10 @@ def cleanup_test_files():
 # Pytest configuration for different test types
 def pytest_configure(config):
     """Configure pytest with custom markers and settings."""
-    config.addinivalue_line(
-        "markers", "unit: mark test as a unit test"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as an integration test"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
-    config.addinivalue_line(
-        "markers", "api: mark test as requiring API access"
-    )
+    config.addinivalue_line("markers", "unit: mark test as a unit test")
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line("markers", "slow: mark test as slow running")
+    config.addinivalue_line("markers", "api: mark test as requiring API access")
 
 
 def pytest_collection_modifyitems(config, items):
