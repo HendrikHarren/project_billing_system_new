@@ -1,13 +1,16 @@
 """
 Unit tests for retry handler with exponential backoff and circuit breaker.
 """
-import pytest
+
+import asyncio
 import time
 from unittest.mock import Mock, patch
-from googleapiclient.errors import HttpError
-import asyncio
 
-from src.services.retry_handler import RetryHandler, CircuitBreakerError, RetryExhaustedException
+import pytest
+from googleapiclient.errors import HttpError
+
+from src.services.retry_handler import (CircuitBreakerError,
+                                        RetryExhaustedException, RetryHandler)
 
 
 class TestRetryHandler:
@@ -23,7 +26,7 @@ class TestRetryHandler:
             exponential_base=2,
             jitter_factor=0.1,
             circuit_breaker_threshold=5,
-            circuit_breaker_timeout=2.0
+            circuit_breaker_timeout=2.0,
         )
 
     def test_initialization_with_defaults(self):
@@ -52,13 +55,13 @@ class TestRetryHandler:
         mock_func = Mock()
         rate_limit_error = HttpError(
             resp=Mock(status=429),
-            content=b'{"error": {"code": 429, "message": "Rate limit exceeded"}}'
+            content=b'{"error": {"code": 429, "message": "Rate limit exceeded"}}',
         )
 
         # Fail twice, then succeed
         mock_func.side_effect = [rate_limit_error, rate_limit_error, "success"]
 
-        with patch('time.sleep') as mock_sleep:
+        with patch("time.sleep") as mock_sleep:
             result = retry_handler.execute_with_retry(mock_func)
 
         assert result == "success"
@@ -70,12 +73,12 @@ class TestRetryHandler:
         mock_func = Mock()
         server_error = HttpError(
             resp=Mock(status=503),
-            content=b'{"error": {"code": 503, "message": "Service unavailable"}}'
+            content=b'{"error": {"code": 503, "message": "Service unavailable"}}',
         )
 
         mock_func.side_effect = [server_error, "success"]
 
-        with patch('time.sleep') as mock_sleep:
+        with patch("time.sleep") as mock_sleep:
             result = retry_handler.execute_with_retry(mock_func)
 
         assert result == "success"
@@ -87,7 +90,7 @@ class TestRetryHandler:
         mock_func = Mock()
         client_error = HttpError(
             resp=Mock(status=404),
-            content=b'{"error": {"code": 404, "message": "Not found"}}'
+            content=b'{"error": {"code": 404, "message": "Not found"}}',
         )
 
         mock_func.side_effect = client_error
@@ -103,12 +106,17 @@ class TestRetryHandler:
         delays = []
 
         # Mock sleep to capture delay values
-        with patch('time.sleep') as mock_sleep:
+        with patch("time.sleep") as mock_sleep:
             mock_sleep.side_effect = lambda delay: delays.append(delay)
 
             mock_func = Mock()
-            server_error = HttpError(resp=Mock(status=500), content=b'Server Error')
-            mock_func.side_effect = [server_error, server_error, server_error, server_error]
+            server_error = HttpError(resp=Mock(status=500), content=b"Server Error")
+            mock_func.side_effect = [
+                server_error,
+                server_error,
+                server_error,
+                server_error,
+            ]
 
             with pytest.raises(RetryExhaustedException):
                 retry_handler.execute_with_retry(mock_func)
@@ -123,13 +131,13 @@ class TestRetryHandler:
         """Test that jitter is applied to backoff delays."""
         delays = []
 
-        with patch('time.sleep') as mock_sleep:
+        with patch("time.sleep") as mock_sleep:
             mock_sleep.side_effect = lambda delay: delays.append(delay)
-            with patch('random.uniform') as mock_uniform:
+            with patch("random.uniform") as mock_uniform:
                 mock_uniform.return_value = 0.05  # Fixed jitter for testing
 
                 mock_func = Mock()
-                server_error = HttpError(resp=Mock(status=500), content=b'Server Error')
+                server_error = HttpError(resp=Mock(status=500), content=b"Server Error")
                 mock_func.side_effect = [server_error, "success"]
 
                 retry_handler.execute_with_retry(mock_func)
@@ -144,15 +152,15 @@ class TestRetryHandler:
             max_retries=5,
             base_delay=10.0,
             max_delay=2.0,  # Very low max to test capping
-            exponential_base=3
+            exponential_base=3,
         )
 
         delays = []
-        with patch('time.sleep') as mock_sleep:
+        with patch("time.sleep") as mock_sleep:
             mock_sleep.side_effect = lambda delay: delays.append(delay)
 
             mock_func = Mock()
-            server_error = HttpError(resp=Mock(status=500), content=b'Server Error')
+            server_error = HttpError(resp=Mock(status=500), content=b"Server Error")
             mock_func.side_effect = [server_error] * 6
 
             with pytest.raises(RetryExhaustedException):
@@ -164,7 +172,7 @@ class TestRetryHandler:
     def test_retry_exhausted_exception(self, retry_handler):
         """Test RetryExhaustedException after max retries."""
         mock_func = Mock()
-        server_error = HttpError(resp=Mock(status=500), content=b'Server Error')
+        server_error = HttpError(resp=Mock(status=500), content=b"Server Error")
         mock_func.side_effect = server_error
 
         with pytest.raises(RetryExhaustedException) as exc_info:
@@ -176,7 +184,7 @@ class TestRetryHandler:
     def test_circuit_breaker_opens_after_threshold(self, retry_handler):
         """Test circuit breaker opens after failure threshold."""
         mock_func = Mock()
-        server_error = HttpError(resp=Mock(status=500), content=b'Server Error')
+        server_error = HttpError(resp=Mock(status=500), content=b"Server Error")
         mock_func.side_effect = server_error
 
         # Trigger failures to reach circuit breaker threshold
@@ -197,7 +205,7 @@ class TestRetryHandler:
         """Test circuit breaker transitions to half-open after timeout."""
         # Open the circuit breaker
         mock_func = Mock()
-        server_error = HttpError(resp=Mock(status=500), content=b'Server Error')
+        server_error = HttpError(resp=Mock(status=500), content=b"Server Error")
         mock_func.side_effect = server_error
 
         for _ in range(5):
@@ -209,7 +217,7 @@ class TestRetryHandler:
         assert retry_handler._circuit_breaker_open is True
 
         # Simulate timeout passage
-        with patch('time.time') as mock_time:
+        with patch("time.time") as mock_time:
             mock_time.return_value = retry_handler._circuit_breaker_opened_at + 3.0
 
             # Should allow one test call (half-open state)
@@ -224,7 +232,7 @@ class TestRetryHandler:
         """Test circuit breaker closes after successful call in half-open state."""
         # Open circuit breaker
         mock_func = Mock()
-        server_error = HttpError(resp=Mock(status=500), content=b'Server Error')
+        server_error = HttpError(resp=Mock(status=500), content=b"Server Error")
         mock_func.side_effect = server_error
 
         for _ in range(5):
@@ -234,7 +242,7 @@ class TestRetryHandler:
                 pass
 
         # Simulate timeout and successful recovery
-        with patch('time.time') as mock_time:
+        with patch("time.time") as mock_time:
             mock_time.return_value = retry_handler._circuit_breaker_opened_at + 3.0
             mock_func.side_effect = None
             mock_func.return_value = "success"
@@ -247,6 +255,7 @@ class TestRetryHandler:
 
     def test_custom_retry_conditions(self):
         """Test custom retry condition function."""
+
         def custom_retry_condition(exception):
             return isinstance(exception, ValueError)
 
@@ -256,7 +265,7 @@ class TestRetryHandler:
         value_error = ValueError("Custom error")
         mock_func.side_effect = [value_error, "success"]
 
-        with patch('time.sleep'):
+        with patch("time.sleep"):
             result = handler.execute_with_retry(mock_func)
 
         assert result == "success"
@@ -264,6 +273,7 @@ class TestRetryHandler:
 
     def test_no_retry_on_non_matching_condition(self):
         """Test no retry when custom condition doesn't match."""
+
         def custom_retry_condition(exception):
             return isinstance(exception, ValueError)
 
@@ -281,16 +291,12 @@ class TestRetryHandler:
     def test_retry_with_function_arguments(self, retry_handler):
         """Test retry handler preserves function arguments."""
         mock_func = Mock()
-        server_error = HttpError(resp=Mock(status=500), content=b'Server Error')
+        server_error = HttpError(resp=Mock(status=500), content=b"Server Error")
         mock_func.side_effect = [server_error, "success"]
 
-        with patch('time.sleep'):
+        with patch("time.sleep"):
             result = retry_handler.execute_with_retry(
-                mock_func,
-                "arg1",
-                "arg2",
-                kwarg1="value1",
-                kwarg2="value2"
+                mock_func, "arg1", "arg2", kwarg1="value1", kwarg2="value2"
             )
 
         assert result == "success"
@@ -301,22 +307,22 @@ class TestRetryHandler:
     def test_retry_statistics_tracking(self, retry_handler):
         """Test that retry statistics are tracked correctly."""
         mock_func = Mock()
-        server_error = HttpError(resp=Mock(status=500), content=b'Server Error')
+        server_error = HttpError(resp=Mock(status=500), content=b"Server Error")
         mock_func.side_effect = [server_error, server_error, "success"]
 
-        with patch('time.sleep'):
+        with patch("time.sleep"):
             retry_handler.execute_with_retry(mock_func)
 
         stats = retry_handler.get_retry_statistics()
-        assert stats['total_calls'] == 1
-        assert stats['total_retries'] == 2
-        assert stats['total_failures'] == 0  # Ultimately successful
+        assert stats["total_calls"] == 1
+        assert stats["total_retries"] == 2
+        assert stats["total_failures"] == 0  # Ultimately successful
 
     def test_reset_circuit_breaker(self, retry_handler):
         """Test manual circuit breaker reset."""
         # Open circuit breaker
         mock_func = Mock()
-        server_error = HttpError(resp=Mock(status=500), content=b'Server Error')
+        server_error = HttpError(resp=Mock(status=500), content=b"Server Error")
         mock_func.side_effect = server_error
 
         for _ in range(5):
@@ -352,7 +358,9 @@ class TestRetryHandler:
 
         def worker():
             try:
-                mock_func = Mock(return_value=f"success-{threading.current_thread().ident}")
+                mock_func = Mock(
+                    return_value=f"success-{threading.current_thread().ident}"
+                )
                 result = retry_handler.execute_with_retry(mock_func)
                 results.append(result)
             except Exception as e:
@@ -406,7 +414,7 @@ class TestRetryHandlerErrorScenarios:
             exponential_base=2,
             jitter_factor=0.1,
             circuit_breaker_threshold=5,
-            circuit_breaker_timeout=2.0
+            circuit_breaker_timeout=2.0,
         )
 
     def test_malformed_http_error_handling(self, retry_handler):
@@ -414,8 +422,7 @@ class TestRetryHandlerErrorScenarios:
         mock_func = Mock()
         # Create HTTP error with malformed response
         malformed_error = HttpError(
-            resp=Mock(status=500),
-            content=b'Invalid JSON response'
+            resp=Mock(status=500), content=b"Invalid JSON response"
         )
         mock_func.side_effect = malformed_error
 
@@ -430,7 +437,7 @@ class TestRetryHandlerErrorScenarios:
         timeout_error = socket.timeout("Connection timed out")
         mock_func.side_effect = [timeout_error, "success"]
 
-        with patch('time.sleep'):
+        with patch("time.sleep"):
             result = retry_handler.execute_with_retry(mock_func)
 
         assert result == "success"
@@ -444,7 +451,7 @@ class TestRetryHandlerErrorScenarios:
         connection_error = requests.exceptions.ConnectionError("Connection failed")
         mock_func.side_effect = [connection_error, "success"]
 
-        with patch('time.sleep'):
+        with patch("time.sleep"):
             result = retry_handler.execute_with_retry(mock_func)
 
         assert result == "success"

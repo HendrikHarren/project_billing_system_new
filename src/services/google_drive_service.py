@@ -1,9 +1,11 @@
 """
 Google Drive service with modern authentication and retry handling.
 """
+
 import logging
-from typing import Dict, List, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import google.auth
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -29,7 +31,7 @@ class GoogleDriveService:
     def __init__(
         self,
         retry_handler: Optional[RetryHandler] = None,
-        scopes: Optional[List[str]] = None
+        scopes: Optional[List[str]] = None,
     ):
         """
         Initialize Google Drive service.
@@ -39,7 +41,7 @@ class GoogleDriveService:
             scopes: Custom OAuth scopes for authentication
         """
         self.retry_handler = retry_handler or RetryHandler()
-        self.scopes = scopes or ['https://www.googleapis.com/auth/drive.readonly']
+        self.scopes = scopes or ["https://www.googleapis.com/auth/drive.readonly"]
 
         # Initialize Google Drive API client
         self._service = self._create_service()
@@ -57,7 +59,7 @@ class GoogleDriveService:
         """
         try:
             credentials, project = google.auth.default(scopes=self.scopes)
-            service = build('drive', 'v3', credentials=credentials)
+            service = build("drive", "v3", credentials=credentials)
 
             logger.info(f"Google Drive service initialized for project: {project}")
             return service
@@ -67,10 +69,7 @@ class GoogleDriveService:
             raise
 
     def list_files_in_folder(
-        self,
-        folder_id: str,
-        mime_type: Optional[str] = None,
-        page_size: int = 100
+        self, folder_id: str, mime_type: Optional[str] = None, page_size: int = 100
     ) -> List[Dict[str, Any]]:
         """
         List all files in a folder with pagination handling.
@@ -102,21 +101,23 @@ class GoogleDriveService:
         query = " and ".join(query_parts)
 
         def _list_operation():
-            return (self._service.files()
-                   .list(
-                       q=query,
-                       pageSize=page_size,
-                       pageToken=page_token,
-                       fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, createdTime, parents)"
-                   )
-                   .execute())
+            return (
+                self._service.files()
+                .list(
+                    q=query,
+                    pageSize=page_size,
+                    pageToken=page_token,
+                    fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, createdTime, parents)",
+                )
+                .execute()
+            )
 
         try:
             while True:
                 result = self.retry_handler.execute_with_retry(_list_operation)
 
-                files.extend(result.get('files', []))
-                page_token = result.get('nextPageToken')
+                files.extend(result.get("files", []))
+                page_token = result.get("nextPageToken")
 
                 if not page_token:
                     break
@@ -154,12 +155,14 @@ class GoogleDriveService:
             return self._metadata_cache[file_id]
 
         def _metadata_operation():
-            return (self._service.files()
-                   .get(
-                       fileId=file_id,
-                       fields="id, name, mimeType, size, modifiedTime, createdTime, parents, properties"
-                   )
-                   .execute())
+            return (
+                self._service.files()
+                .get(
+                    fileId=file_id,
+                    fields="id, name, mimeType, size, modifiedTime, createdTime, parents, properties",
+                )
+                .execute()
+            )
 
         try:
             result = self.retry_handler.execute_with_retry(_metadata_operation)
@@ -182,7 +185,7 @@ class GoogleDriveService:
         self,
         name_pattern: str,
         parent_folder_id: Optional[str] = None,
-        mime_type: Optional[str] = None
+        mime_type: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Search for files by name pattern.
@@ -210,22 +213,26 @@ class GoogleDriveService:
         query = " and ".join(query_parts)
 
         def _search_operation():
-            return (self._service.files()
-                   .list(
-                       q=query,
-                       fields="files(id, name, mimeType, size, modifiedTime, createdTime, parents)"
-                   )
-                   .execute())
+            return (
+                self._service.files()
+                .list(
+                    q=query,
+                    fields="files(id, name, mimeType, size, modifiedTime, createdTime, parents)",
+                )
+                .execute()
+            )
 
         try:
             result = self.retry_handler.execute_with_retry(_search_operation)
-            files = result.get('files', [])
+            files = result.get("files", [])
 
             logger.info(f"Found {len(files)} files matching pattern '{name_pattern}'")
             return files
 
         except HttpError as e:
-            logger.error(f"Failed to search for files with pattern '{name_pattern}': {e}")
+            logger.error(
+                f"Failed to search for files with pattern '{name_pattern}': {e}"
+            )
             raise
         except Exception as e:
             logger.error(f"Unexpected error searching files: {e}")
@@ -245,8 +252,7 @@ class GoogleDriveService:
             HttpError: If API request fails
         """
         return self.list_files_in_folder(
-            parent_folder_id,
-            mime_type='application/vnd.google-apps.folder'
+            parent_folder_id, mime_type="application/vnd.google-apps.folder"
         )
 
     def get_timesheet_files(self, folder_id: str) -> List[Dict[str, Any]]:
@@ -267,16 +273,13 @@ class GoogleDriveService:
         try:
             # Get Excel files that contain "Timesheet" in the name
             timesheet_files = self.search_files_by_name_pattern(
-                'Timesheet_',
+                "Timesheet_",
                 parent_folder_id=folder_id,
-                mime_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
 
             # Sort by modification time (newest first)
-            timesheet_files.sort(
-                key=lambda x: x.get('modifiedTime', ''),
-                reverse=True
-            )
+            timesheet_files.sort(key=lambda x: x.get("modifiedTime", ""), reverse=True)
 
             logger.info(f"Found {len(timesheet_files)} timesheet files")
             return timesheet_files
@@ -286,10 +289,7 @@ class GoogleDriveService:
             raise
 
     def get_files_modified_after_date(
-        self,
-        folder_id: str,
-        cutoff_date: datetime,
-        mime_type: Optional[str] = None
+        self, folder_id: str, cutoff_date: datetime, mime_type: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Get files modified after a specific date.
@@ -306,13 +306,13 @@ class GoogleDriveService:
             HttpError: If API request fails
         """
         # Format date for Google Drive API
-        formatted_date = cutoff_date.strftime('%Y-%m-%dT%H:%M:%S')
+        formatted_date = cutoff_date.strftime("%Y-%m-%dT%H:%M:%S")
 
         # Build query
         query_parts = [
             f"'{folder_id}' in parents",
             "trashed=false",
-            f"modifiedTime > '{formatted_date}'"
+            f"modifiedTime > '{formatted_date}'",
         ]
 
         if mime_type:
@@ -321,26 +321,24 @@ class GoogleDriveService:
         query = " and ".join(query_parts)
 
         def _search_operation():
-            return (self._service.files()
-                   .list(
-                       q=query,
-                       fields="files(id, name, mimeType, size, modifiedTime, createdTime, parents)"
-                   )
-                   .execute())
+            return (
+                self._service.files()
+                .list(
+                    q=query,
+                    fields="files(id, name, mimeType, size, modifiedTime, createdTime, parents)",
+                )
+                .execute()
+            )
 
         try:
             result = self.retry_handler.execute_with_retry(_search_operation)
-            files = result.get('files', [])
+            files = result.get("files", [])
 
-            logger.info(
-                f"Found {len(files)} files modified after {formatted_date}"
-            )
+            logger.info(f"Found {len(files)} files modified after {formatted_date}")
             return files
 
         except HttpError as e:
-            logger.error(
-                f"Failed to get files modified after {formatted_date}: {e}"
-            )
+            logger.error(f"Failed to get files modified after {formatted_date}: {e}")
             raise
         except Exception as e:
             logger.error(f"Unexpected error getting files by date: {e}")
@@ -361,13 +359,12 @@ class GoogleDriveService:
         """
         # Look for both Google Sheets and Excel files
         google_sheets = self.list_files_in_folder(
-            folder_id,
-            mime_type='application/vnd.google-apps.spreadsheet'
+            folder_id, mime_type="application/vnd.google-apps.spreadsheet"
         )
 
         excel_files = self.list_files_in_folder(
             folder_id,
-            mime_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 
         all_spreadsheets = google_sheets + excel_files
@@ -393,8 +390,8 @@ class GoogleDriveService:
             Dictionary with cache statistics
         """
         return {
-            'metadata_cache_size': len(self._metadata_cache),
-            'folder_cache_size': len(self._folder_cache)
+            "metadata_cache_size": len(self._metadata_cache),
+            "folder_cache_size": len(self._folder_cache),
         }
 
     def preload_folder_metadata(self, folder_id: str):
@@ -412,10 +409,12 @@ class GoogleDriveService:
 
             # Preload metadata for all files
             for file_info in files:
-                if file_info['id'] not in self._metadata_cache:
-                    self.get_file_metadata(file_info['id'])
+                if file_info["id"] not in self._metadata_cache:
+                    self.get_file_metadata(file_info["id"])
 
-            logger.info(f"Preloaded metadata for {len(files)} files in folder {folder_id}")
+            logger.info(
+                f"Preloaded metadata for {len(files)} files in folder {folder_id}"
+            )
 
         except Exception as e:
             logger.error(f"Failed to preload folder metadata: {e}")

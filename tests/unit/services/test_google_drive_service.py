@@ -1,10 +1,12 @@
 """
 Unit tests for Google Drive service.
 """
-import pytest
+
+from typing import Any, Dict, List
 from unittest.mock import Mock, patch
+
+import pytest
 from googleapiclient.errors import HttpError
-from typing import List, Dict, Any
 
 from src.services.google_drive_service import GoogleDriveService
 from src.services.retry_handler import RetryHandler
@@ -31,71 +33,71 @@ class TestGoogleDriveService:
     @pytest.fixture
     def drive_service(self, mock_drive_client, mock_retry_handler):
         """GoogleDriveService instance with mocked dependencies."""
-        with patch('src.services.google_drive_service.build') as mock_build:
+        with patch("src.services.google_drive_service.build") as mock_build:
             mock_build.return_value = mock_drive_client
             service = GoogleDriveService(retry_handler=mock_retry_handler)
             return service
 
     def test_service_initialization(self, mock_retry_handler):
         """Test service initializes with proper authentication."""
-        with patch('src.services.google_drive_service.build') as mock_build:
-            with patch('google.auth.default') as mock_auth:
+        with patch("src.services.google_drive_service.build") as mock_build:
+            with patch("google.auth.default") as mock_auth:
                 mock_credentials = Mock()
                 mock_auth.return_value = (mock_credentials, "test-project")
 
                 service = GoogleDriveService(retry_handler=mock_retry_handler)
 
                 mock_auth.assert_called_once_with(
-                    scopes=['https://www.googleapis.com/auth/drive.readonly']
+                    scopes=["https://www.googleapis.com/auth/drive.readonly"]
                 )
                 mock_build.assert_called_once_with(
-                    'drive', 'v3', credentials=mock_credentials
+                    "drive", "v3", credentials=mock_credentials
                 )
 
     def test_list_files_in_folder_success(self, drive_service, mock_drive_client):
         """Test successful listing of files in a folder."""
         mock_response = {
-            'files': [
+            "files": [
                 {
-                    'id': 'file1',
-                    'name': 'Timesheet_2024_01.xlsx',
-                    'mimeType': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'modifiedTime': '2024-01-15T10:30:00Z'
+                    "id": "file1",
+                    "name": "Timesheet_2024_01.xlsx",
+                    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "modifiedTime": "2024-01-15T10:30:00Z",
                 },
                 {
-                    'id': 'file2',
-                    'name': 'Timesheet_2024_02.xlsx',
-                    'mimeType': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'modifiedTime': '2024-02-15T10:30:00Z'
-                }
+                    "id": "file2",
+                    "name": "Timesheet_2024_02.xlsx",
+                    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "modifiedTime": "2024-02-15T10:30:00Z",
+                },
             ],
-            'nextPageToken': None
+            "nextPageToken": None,
         }
         mock_drive_client.files().list().execute.return_value = mock_response
 
-        result = drive_service.list_files_in_folder('test-folder-id')
+        result = drive_service.list_files_in_folder("test-folder-id")
 
         assert len(result) == 2
-        assert result[0]['name'] == 'Timesheet_2024_01.xlsx'
-        assert result[1]['name'] == 'Timesheet_2024_02.xlsx'
+        assert result[0]["name"] == "Timesheet_2024_01.xlsx"
+        assert result[1]["name"] == "Timesheet_2024_02.xlsx"
 
     def test_list_files_with_pagination(self, drive_service, mock_drive_client):
         """Test listing files with pagination handling."""
         # First page
         mock_response_1 = {
-            'files': [{'id': 'file1', 'name': 'File1.xlsx'}],
-            'nextPageToken': 'token123'
+            "files": [{"id": "file1", "name": "File1.xlsx"}],
+            "nextPageToken": "token123",
         }
         # Second page
         mock_response_2 = {
-            'files': [{'id': 'file2', 'name': 'File2.xlsx'}],
-            'nextPageToken': None
+            "files": [{"id": "file2", "name": "File2.xlsx"}],
+            "nextPageToken": None,
         }
 
         mock_list = mock_drive_client.files().list
         mock_list().execute.side_effect = [mock_response_1, mock_response_2]
 
-        result = drive_service.list_files_in_folder('test-folder-id')
+        result = drive_service.list_files_in_folder("test-folder-id")
 
         assert len(result) == 2
         assert mock_list.call_count == 2
@@ -103,154 +105,159 @@ class TestGoogleDriveService:
     def test_list_files_with_filter(self, drive_service, mock_drive_client):
         """Test listing files with MIME type filter."""
         mock_response = {
-            'files': [
+            "files": [
                 {
-                    'id': 'file1',
-                    'name': 'Timesheet.xlsx',
-                    'mimeType': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    "id": "file1",
+                    "name": "Timesheet.xlsx",
+                    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 }
             ]
         }
         mock_drive_client.files().list().execute.return_value = mock_response
 
         result = drive_service.list_files_in_folder(
-            'test-folder-id',
-            mime_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            "test-folder-id",
+            mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 
         # Verify filter was applied in query
         call_args = mock_drive_client.files().list.call_args
-        query = call_args[1]['q']
-        assert 'mimeType=' in query
+        query = call_args[1]["q"]
+        assert "mimeType=" in query
 
     def test_get_file_metadata_success(self, drive_service, mock_drive_client):
         """Test successful retrieval of file metadata."""
         mock_response = {
-            'id': 'file123',
-            'name': 'Test_File.xlsx',
-            'mimeType': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'size': '1024',
-            'modifiedTime': '2024-01-15T10:30:00Z',
-            'createdTime': '2024-01-01T09:00:00Z'
+            "id": "file123",
+            "name": "Test_File.xlsx",
+            "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "size": "1024",
+            "modifiedTime": "2024-01-15T10:30:00Z",
+            "createdTime": "2024-01-01T09:00:00Z",
         }
         mock_drive_client.files().get().execute.return_value = mock_response
 
-        result = drive_service.get_file_metadata('file123')
+        result = drive_service.get_file_metadata("file123")
 
-        assert result['name'] == 'Test_File.xlsx'
-        assert result['size'] == '1024'
+        assert result["name"] == "Test_File.xlsx"
+        assert result["size"] == "1024"
 
     def test_search_files_by_name_pattern(self, drive_service, mock_drive_client):
         """Test searching files by name pattern."""
         mock_response = {
-            'files': [
-                {'id': 'file1', 'name': 'Timesheet_2024_01.xlsx'},
-                {'id': 'file2', 'name': 'Timesheet_2024_02.xlsx'}
+            "files": [
+                {"id": "file1", "name": "Timesheet_2024_01.xlsx"},
+                {"id": "file2", "name": "Timesheet_2024_02.xlsx"},
             ]
         }
         mock_drive_client.files().list().execute.return_value = mock_response
 
-        result = drive_service.search_files_by_name_pattern('Timesheet_2024_*.xlsx')
+        result = drive_service.search_files_by_name_pattern("Timesheet_2024_*.xlsx")
 
         assert len(result) == 2
         call_args = mock_drive_client.files().list.call_args
-        query = call_args[1]['q']
-        assert 'name contains' in query
+        query = call_args[1]["q"]
+        assert "name contains" in query
 
     def test_get_folder_structure(self, drive_service, mock_drive_client):
         """Test retrieving folder structure."""
         mock_response = {
-            'files': [
+            "files": [
                 {
-                    'id': 'folder1',
-                    'name': 'Timesheets',
-                    'mimeType': 'application/vnd.google-apps.folder'
+                    "id": "folder1",
+                    "name": "Timesheets",
+                    "mimeType": "application/vnd.google-apps.folder",
                 },
                 {
-                    'id': 'folder2',
-                    'name': 'Archives',
-                    'mimeType': 'application/vnd.google-apps.folder'
-                }
+                    "id": "folder2",
+                    "name": "Archives",
+                    "mimeType": "application/vnd.google-apps.folder",
+                },
             ]
         }
         mock_drive_client.files().list().execute.return_value = mock_response
 
-        result = drive_service.get_folder_structure('parent-folder-id')
+        result = drive_service.get_folder_structure("parent-folder-id")
 
         assert len(result) == 2
-        assert all(item['mimeType'] == 'application/vnd.google-apps.folder' for item in result)
+        assert all(
+            item["mimeType"] == "application/vnd.google-apps.folder" for item in result
+        )
 
-    def test_list_files_with_retry_on_rate_limit(self, drive_service, mock_retry_handler):
+    def test_list_files_with_retry_on_rate_limit(
+        self, drive_service, mock_retry_handler
+    ):
         """Test file listing with retry on rate limit."""
         mock_retry_handler.execute_with_retry.side_effect = lambda func: func()
 
-        drive_service.list_files_in_folder('test-folder-id')
+        drive_service.list_files_in_folder("test-folder-id")
 
         mock_retry_handler.execute_with_retry.assert_called_once()
 
     def test_api_error_handling(self, drive_service, mock_drive_client):
         """Test handling of API errors."""
         mock_drive_client.files().list().execute.side_effect = HttpError(
-            resp=Mock(status=404), content=b'Not Found'
+            resp=Mock(status=404), content=b"Not Found"
         )
 
         with pytest.raises(HttpError):
-            drive_service.list_files_in_folder('nonexistent-folder')
+            drive_service.list_files_in_folder("nonexistent-folder")
 
     def test_empty_folder_handling(self, drive_service, mock_drive_client):
         """Test handling of empty folders."""
-        mock_response = {'files': []}
+        mock_response = {"files": []}
         mock_drive_client.files().list().execute.return_value = mock_response
 
-        result = drive_service.list_files_in_folder('empty-folder-id')
+        result = drive_service.list_files_in_folder("empty-folder-id")
 
         assert result == []
 
     def test_get_timesheet_files(self, drive_service, mock_drive_client):
         """Test specialized method for getting timesheet files."""
         mock_response = {
-            'files': [
+            "files": [
                 {
-                    'id': 'ts1',
-                    'name': 'Timesheet_John_2024_01.xlsx',
-                    'modifiedTime': '2024-01-15T10:30:00Z'
+                    "id": "ts1",
+                    "name": "Timesheet_John_2024_01.xlsx",
+                    "modifiedTime": "2024-01-15T10:30:00Z",
                 },
                 {
-                    'id': 'ts2',
-                    'name': 'Timesheet_Jane_2024_01.xlsx',
-                    'modifiedTime': '2024-01-16T10:30:00Z'
-                }
+                    "id": "ts2",
+                    "name": "Timesheet_Jane_2024_01.xlsx",
+                    "modifiedTime": "2024-01-16T10:30:00Z",
+                },
             ]
         }
         mock_drive_client.files().list().execute.return_value = mock_response
 
-        result = drive_service.get_timesheet_files('timesheet-folder-id')
+        result = drive_service.get_timesheet_files("timesheet-folder-id")
 
         assert len(result) == 2
-        assert all('Timesheet_' in file['name'] for file in result)
+        assert all("Timesheet_" in file["name"] for file in result)
 
     def test_get_files_modified_after_date(self, drive_service, mock_drive_client):
         """Test filtering files by modification date."""
         mock_response = {
-            'files': [
+            "files": [
                 {
-                    'id': 'file1',
-                    'name': 'Recent_File.xlsx',
-                    'modifiedTime': '2024-01-15T10:30:00Z'
+                    "id": "file1",
+                    "name": "Recent_File.xlsx",
+                    "modifiedTime": "2024-01-15T10:30:00Z",
                 }
             ]
         }
         mock_drive_client.files().list().execute.return_value = mock_response
 
         from datetime import datetime
+
         cutoff_date = datetime(2024, 1, 1)
 
-        result = drive_service.get_files_modified_after_date('folder-id', cutoff_date)
+        result = drive_service.get_files_modified_after_date("folder-id", cutoff_date)
 
         assert len(result) == 1
         call_args = mock_drive_client.files().list.call_args
-        query = call_args[1]['q']
-        assert 'modifiedTime >' in query
+        query = call_args[1]["q"]
+        assert "modifiedTime >" in query
 
 
 class TestGoogleDriveServiceIntegration:
@@ -278,7 +285,7 @@ class TestGoogleDriveServiceIntegration:
 
         # Should find timesheet files
         assert len(timesheet_files) > 0
-        assert all('.xlsx' in file['name'] for file in timesheet_files)
+        assert all(".xlsx" in file["name"] for file in timesheet_files)
 
 
 class TestGoogleDriveServiceErrorHandling:
@@ -288,49 +295,49 @@ class TestGoogleDriveServiceErrorHandling:
         """Test handling of folder not found errors."""
         not_found_error = HttpError(
             resp=Mock(status=404),
-            content=b'{"error": {"code": 404, "message": "File not found"}}'
+            content=b'{"error": {"code": 404, "message": "File not found"}}',
         )
 
         mock_drive_client.files().list().execute.side_effect = not_found_error
 
         with pytest.raises(HttpError):
-            drive_service.list_files_in_folder('nonexistent-folder')
+            drive_service.list_files_in_folder("nonexistent-folder")
 
     def test_permission_denied_handling(self, drive_service, mock_drive_client):
         """Test handling of permission denied errors."""
         permission_error = HttpError(
             resp=Mock(status=403),
-            content=b'{"error": {"code": 403, "message": "Permission denied"}}'
+            content=b'{"error": {"code": 403, "message": "Permission denied"}}',
         )
 
         mock_drive_client.files().list().execute.side_effect = permission_error
 
         with pytest.raises(HttpError):
-            drive_service.list_files_in_folder('restricted-folder')
+            drive_service.list_files_in_folder("restricted-folder")
 
     def test_rate_limit_handling(self, drive_service, mock_retry_handler):
         """Test handling of rate limit errors."""
         rate_limit_error = HttpError(
             resp=Mock(status=429),
-            content=b'{"error": {"code": 429, "message": "Rate limit exceeded"}}'
+            content=b'{"error": {"code": 429, "message": "Rate limit exceeded"}}',
         )
 
         mock_retry_handler.execute_with_retry.side_effect = rate_limit_error
 
         with pytest.raises(HttpError):
-            drive_service.list_files_in_folder('test-folder-id')
+            drive_service.list_files_in_folder("test-folder-id")
 
     def test_malformed_query_handling(self, drive_service, mock_drive_client):
         """Test handling of malformed query errors."""
         bad_request_error = HttpError(
             resp=Mock(status=400),
-            content=b'{"error": {"code": 400, "message": "Invalid query"}}'
+            content=b'{"error": {"code": 400, "message": "Invalid query"}}',
         )
 
         mock_drive_client.files().list().execute.side_effect = bad_request_error
 
         with pytest.raises(HttpError):
-            drive_service.search_files_by_name_pattern('invalid[query')
+            drive_service.search_files_by_name_pattern("invalid[query")
 
 
 class TestGoogleDriveServiceCaching:
@@ -339,16 +346,16 @@ class TestGoogleDriveServiceCaching:
     def test_metadata_caching(self, drive_service, mock_drive_client):
         """Test that file metadata is cached appropriately."""
         mock_response = {
-            'id': 'file123',
-            'name': 'Test_File.xlsx',
-            'mimeType': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            "id": "file123",
+            "name": "Test_File.xlsx",
+            "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         }
         mock_drive_client.files().get().execute.return_value = mock_response
 
         # First call
-        result1 = drive_service.get_file_metadata('file123')
+        result1 = drive_service.get_file_metadata("file123")
         # Second call should use cache
-        result2 = drive_service.get_file_metadata('file123')
+        result2 = drive_service.get_file_metadata("file123")
 
         assert result1 == result2
         # API should only be called once due to caching
@@ -356,15 +363,13 @@ class TestGoogleDriveServiceCaching:
 
     def test_folder_listing_caching(self, drive_service, mock_drive_client):
         """Test that folder listings are cached for performance."""
-        mock_response = {
-            'files': [{'id': 'file1', 'name': 'File1.xlsx'}]
-        }
+        mock_response = {"files": [{"id": "file1", "name": "File1.xlsx"}]}
         mock_drive_client.files().list().execute.return_value = mock_response
 
         # First call
-        result1 = drive_service.list_files_in_folder('folder123')
+        result1 = drive_service.list_files_in_folder("folder123")
         # Second call should use cache
-        result2 = drive_service.list_files_in_folder('folder123')
+        result2 = drive_service.list_files_in_folder("folder123")
 
         assert result1 == result2
         # API should only be called once due to caching

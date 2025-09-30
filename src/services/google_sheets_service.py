@@ -1,10 +1,12 @@
 """
 Google Sheets service with modern authentication and retry handling.
 """
+
 import logging
-from typing import Dict, List, Any, Optional
-import pandas as pd
+from typing import Any, Dict, List, Optional
+
 import google.auth
+import pandas as pd
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -28,7 +30,7 @@ class GoogleSheetsService:
     def __init__(
         self,
         retry_handler: Optional[RetryHandler] = None,
-        scopes: Optional[List[str]] = None
+        scopes: Optional[List[str]] = None,
     ):
         """
         Initialize Google Sheets service.
@@ -38,7 +40,7 @@ class GoogleSheetsService:
             scopes: Custom OAuth scopes for authentication
         """
         self.retry_handler = retry_handler or RetryHandler()
-        self.scopes = scopes or ['https://www.googleapis.com/auth/spreadsheets']
+        self.scopes = scopes or ["https://www.googleapis.com/auth/spreadsheets"]
 
         # Initialize Google Sheets API client
         self._service = self._create_service()
@@ -52,7 +54,7 @@ class GoogleSheetsService:
         """
         try:
             credentials, project = google.auth.default(scopes=self.scopes)
-            service = build('sheets', 'v4', credentials=credentials)
+            service = build("sheets", "v4", credentials=credentials)
 
             logger.info(f"Google Sheets service initialized for project: {project}")
             return service
@@ -65,7 +67,7 @@ class GoogleSheetsService:
         self,
         spreadsheet_id: str,
         range_name: str,
-        value_render_option: str = 'UNFORMATTED_VALUE'
+        value_render_option: str = "UNFORMATTED_VALUE",
     ) -> pd.DataFrame:
         """
         Read data from a Google Sheet and return as pandas DataFrame.
@@ -81,18 +83,22 @@ class GoogleSheetsService:
         Raises:
             HttpError: If API request fails
         """
+
         def _read_operation():
-            return (self._service.spreadsheets().values()
-                   .get(
-                       spreadsheetId=spreadsheet_id,
-                       range=range_name,
-                       valueRenderOption=value_render_option
-                   )
-                   .execute())
+            return (
+                self._service.spreadsheets()
+                .values()
+                .get(
+                    spreadsheetId=spreadsheet_id,
+                    range=range_name,
+                    valueRenderOption=value_render_option,
+                )
+                .execute()
+            )
 
         try:
             result = self.retry_handler.execute_with_retry(_read_operation)
-            values = result.get('values', [])
+            values = result.get("values", [])
 
             if not values:
                 logger.info(f"No data found in range {range_name}")
@@ -105,7 +111,7 @@ class GoogleSheetsService:
 
                 # Ensure all rows have the same number of columns
                 max_cols = len(headers)
-                data = [row + [''] * (max_cols - len(row)) for row in data]
+                data = [row + [""] * (max_cols - len(row)) for row in data]
 
                 df = pd.DataFrame(data, columns=headers)
             else:
@@ -128,7 +134,7 @@ class GoogleSheetsService:
         range_name: str,
         data: pd.DataFrame,
         include_headers: bool = False,
-        value_input_option: str = 'RAW'
+        value_input_option: str = "RAW",
     ) -> Dict[str, Any]:
         """
         Write pandas DataFrame to a Google Sheet.
@@ -157,14 +163,17 @@ class GoogleSheetsService:
             values.append(row.astype(str).tolist())
 
         def _write_operation():
-            return (self._service.spreadsheets().values()
-                   .update(
-                       spreadsheetId=spreadsheet_id,
-                       range=range_name,
-                       valueInputOption=value_input_option,
-                       body={'values': values}
-                   )
-                   .execute())
+            return (
+                self._service.spreadsheets()
+                .values()
+                .update(
+                    spreadsheetId=spreadsheet_id,
+                    range=range_name,
+                    valueInputOption=value_input_option,
+                    body={"values": values},
+                )
+                .execute()
+            )
 
         try:
             result = self.retry_handler.execute_with_retry(_write_operation)
@@ -186,7 +195,7 @@ class GoogleSheetsService:
         self,
         spreadsheet_id: str,
         ranges: List[str],
-        value_render_option: str = 'UNFORMATTED_VALUE'
+        value_render_option: str = "UNFORMATTED_VALUE",
     ) -> List[pd.DataFrame]:
         """
         Read multiple ranges from a spreadsheet in a single API call.
@@ -202,22 +211,26 @@ class GoogleSheetsService:
         Raises:
             HttpError: If API request fails
         """
+
         def _batch_read_operation():
-            return (self._service.spreadsheets().values()
-                   .batchGet(
-                       spreadsheetId=spreadsheet_id,
-                       ranges=ranges,
-                       valueRenderOption=value_render_option
-                   )
-                   .execute())
+            return (
+                self._service.spreadsheets()
+                .values()
+                .batchGet(
+                    spreadsheetId=spreadsheet_id,
+                    ranges=ranges,
+                    valueRenderOption=value_render_option,
+                )
+                .execute()
+            )
 
         try:
             result = self.retry_handler.execute_with_retry(_batch_read_operation)
-            value_ranges = result.get('valueRanges', [])
+            value_ranges = result.get("valueRanges", [])
 
             dataframes = []
             for i, value_range in enumerate(value_ranges):
-                values = value_range.get('values', [])
+                values = value_range.get("values", [])
 
                 if not values:
                     dataframes.append(pd.DataFrame())
@@ -230,7 +243,7 @@ class GoogleSheetsService:
 
                     # Ensure consistent column count
                     max_cols = len(headers)
-                    data = [row + [''] * (max_cols - len(row)) for row in data]
+                    data = [row + [""] * (max_cols - len(row)) for row in data]
 
                     df = pd.DataFrame(data, columns=headers)
                 else:
@@ -261,10 +274,11 @@ class GoogleSheetsService:
         Raises:
             HttpError: If API request fails
         """
+
         def _metadata_operation():
-            return (self._service.spreadsheets()
-                   .get(spreadsheetId=spreadsheet_id)
-                   .execute())
+            return (
+                self._service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+            )
 
         try:
             result = self.retry_handler.execute_with_retry(_metadata_operation)
@@ -279,11 +293,7 @@ class GoogleSheetsService:
             logger.error(f"Unexpected error getting metadata: {e}")
             raise
 
-    def clear_sheet_range(
-        self,
-        spreadsheet_id: str,
-        range_name: str
-    ) -> Dict[str, Any]:
+    def clear_sheet_range(self, spreadsheet_id: str, range_name: str) -> Dict[str, Any]:
         """
         Clear a range in a spreadsheet.
 
@@ -297,14 +307,14 @@ class GoogleSheetsService:
         Raises:
             HttpError: If API request fails
         """
+
         def _clear_operation():
-            return (self._service.spreadsheets().values()
-                   .clear(
-                       spreadsheetId=spreadsheet_id,
-                       range=range_name,
-                       body={}
-                   )
-                   .execute())
+            return (
+                self._service.spreadsheets()
+                .values()
+                .clear(spreadsheetId=spreadsheet_id, range=range_name, body={})
+                .execute()
+            )
 
         try:
             result = self.retry_handler.execute_with_retry(_clear_operation)
@@ -324,7 +334,7 @@ class GoogleSheetsService:
         spreadsheet_id: str,
         sheet_title: str,
         row_count: int = 1000,
-        column_count: int = 26
+        column_count: int = 26,
     ) -> Dict[str, Any]:
         """
         Create a new sheet in an existing spreadsheet.
@@ -341,25 +351,27 @@ class GoogleSheetsService:
         Raises:
             HttpError: If API request fails
         """
+
         def _create_operation():
-            requests = [{
-                'addSheet': {
-                    'properties': {
-                        'title': sheet_title,
-                        'gridProperties': {
-                            'rowCount': row_count,
-                            'columnCount': column_count
+            requests = [
+                {
+                    "addSheet": {
+                        "properties": {
+                            "title": sheet_title,
+                            "gridProperties": {
+                                "rowCount": row_count,
+                                "columnCount": column_count,
+                            },
                         }
                     }
                 }
-            }]
+            ]
 
-            return (self._service.spreadsheets()
-                   .batchUpdate(
-                       spreadsheetId=spreadsheet_id,
-                       body={'requests': requests}
-                   )
-                   .execute())
+            return (
+                self._service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
 
         try:
             result = self.retry_handler.execute_with_retry(_create_operation)
@@ -368,7 +380,9 @@ class GoogleSheetsService:
             return result
 
         except HttpError as e:
-            logger.error(f"Failed to create sheet '{sheet_title}' in {spreadsheet_id}: {e}")
+            logger.error(
+                f"Failed to create sheet '{sheet_title}' in {spreadsheet_id}: {e}"
+            )
             raise
         except Exception as e:
             logger.error(f"Unexpected error creating sheet: {e}")
@@ -379,7 +393,7 @@ class GoogleSheetsService:
         spreadsheet_id: str,
         range_name: str,
         data: pd.DataFrame,
-        value_input_option: str = 'RAW'
+        value_input_option: str = "RAW",
     ) -> Dict[str, Any]:
         """
         Append data to the end of a sheet range.
@@ -402,22 +416,23 @@ class GoogleSheetsService:
             values.append(row.astype(str).tolist())
 
         def _append_operation():
-            return (self._service.spreadsheets().values()
-                   .append(
-                       spreadsheetId=spreadsheet_id,
-                       range=range_name,
-                       valueInputOption=value_input_option,
-                       insertDataOption='INSERT_ROWS',
-                       body={'values': values}
-                   )
-                   .execute())
+            return (
+                self._service.spreadsheets()
+                .values()
+                .append(
+                    spreadsheetId=spreadsheet_id,
+                    range=range_name,
+                    valueInputOption=value_input_option,
+                    insertDataOption="INSERT_ROWS",
+                    body={"values": values},
+                )
+                .execute()
+            )
 
         try:
             result = self.retry_handler.execute_with_retry(_append_operation)
 
-            logger.info(
-                f"Appended {len(values)} rows to {spreadsheet_id}:{range_name}"
-            )
+            logger.info(f"Appended {len(values)} rows to {spreadsheet_id}:{range_name}")
             return result
 
         except HttpError as e:

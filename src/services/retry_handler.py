@@ -1,25 +1,29 @@
 """
 Retry handler with exponential backoff, jitter, and circuit breaker pattern.
 """
-import time
-import random
+
 import logging
-import threading
-from typing import Callable, Any, Optional
-from googleapiclient.errors import HttpError
+import random
 import socket
+import threading
+import time
+from typing import Any, Callable, Optional
+
 import requests.exceptions
+from googleapiclient.errors import HttpError
 
 logger = logging.getLogger(__name__)
 
 
 class RetryExhaustedException(Exception):
     """Raised when all retry attempts have been exhausted."""
+
     pass
 
 
 class CircuitBreakerError(Exception):
     """Raised when circuit breaker is open."""
+
     pass
 
 
@@ -44,7 +48,7 @@ class RetryHandler:
         jitter_factor: float = 0.1,
         circuit_breaker_threshold: int = 10,
         circuit_breaker_timeout: float = 60.0,
-        retry_condition: Optional[Callable[[Exception], bool]] = None
+        retry_condition: Optional[Callable[[Exception], bool]] = None,
     ):
         """
         Initialize retry handler.
@@ -113,7 +117,7 @@ class RetryHandler:
             Delay in seconds
         """
         # Calculate exponential delay
-        delay = self.base_delay * (self.exponential_base ** attempt)
+        delay = self.base_delay * (self.exponential_base**attempt)
 
         # Apply maximum delay cap
         delay = min(delay, self.max_delay)
@@ -136,7 +140,10 @@ class RetryHandler:
                 return False
 
             # Check if timeout has passed (transition to half-open)
-            if time.time() - self._circuit_breaker_opened_at >= self.circuit_breaker_timeout:
+            if (
+                time.time() - self._circuit_breaker_opened_at
+                >= self.circuit_breaker_timeout
+            ):
                 logger.info("Circuit breaker transitioning to half-open state")
                 return False
 
@@ -155,8 +162,10 @@ class RetryHandler:
         with self._lock:
             self._failure_count += 1
 
-            if (not self._circuit_breaker_open and
-                self._failure_count >= self.circuit_breaker_threshold):
+            if (
+                not self._circuit_breaker_open
+                and self._failure_count >= self.circuit_breaker_threshold
+            ):
 
                 logger.warning(
                     f"Circuit breaker opened after {self._failure_count} failures"
@@ -196,8 +205,10 @@ class RetryHandler:
 
                 # Success - record and return
                 if attempt > 0:  # Only log if there were retries
-                    func_name = getattr(func, '__name__', repr(func))
-                    logger.info(f"Function {func_name} succeeded after {attempt} retries")
+                    func_name = getattr(func, "__name__", repr(func))
+                    logger.info(
+                        f"Function {func_name} succeeded after {attempt} retries"
+                    )
                     with self._lock:
                         self._total_retries += attempt
 
@@ -209,12 +220,14 @@ class RetryHandler:
 
                 # Check if we should retry
                 if not self.retry_condition(e):
-                    logger.debug(f"Not retrying - condition not met: {type(e).__name__}")
+                    logger.debug(
+                        f"Not retrying - condition not met: {type(e).__name__}"
+                    )
                     raise e
 
                 # Check if we have retries left
                 if attempt >= self.max_retries:
-                    func_name = getattr(func, '__name__', repr(func))
+                    func_name = getattr(func, "__name__", repr(func))
                     logger.warning(
                         f"Max retries ({self.max_retries}) exceeded for {func_name}"
                     )
@@ -230,7 +243,7 @@ class RetryHandler:
 
                 # Calculate delay and wait
                 delay = self._calculate_delay(attempt)
-                func_name = getattr(func, '__name__', repr(func))
+                func_name = getattr(func, "__name__", repr(func))
                 logger.debug(
                     f"Retrying {func_name} in {delay:.2f}s "
                     f"(attempt {attempt + 1}/{self.max_retries + 1}). "
@@ -252,11 +265,11 @@ class RetryHandler:
         """
         with self._lock:
             return {
-                'total_calls': self._total_calls,
-                'total_retries': self._total_retries,
-                'total_failures': self._total_failures,
-                'circuit_breaker_open': self._circuit_breaker_open,
-                'failure_count': self._failure_count
+                "total_calls": self._total_calls,
+                "total_retries": self._total_retries,
+                "total_failures": self._total_failures,
+                "circuit_breaker_open": self._circuit_breaker_open,
+                "failure_count": self._failure_count,
             }
 
     def reset_circuit_breaker(self):
