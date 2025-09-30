@@ -123,9 +123,13 @@ class TestRetryHandler:
 
         # Check that delays follow exponential backoff pattern
         assert len(delays) == 3  # max_retries attempts
-        assert delays[0] >= 0.1  # base_delay with jitter
-        assert delays[1] >= 0.2  # exponential increase
-        assert delays[2] >= 0.4  # exponential increase
+        # Allow for jitter which can reduce delay by up to 10%
+        assert delays[0] >= 0.09  # base_delay (0.1) with jitter
+        assert delays[1] >= 0.18  # exponential increase (0.2) with jitter
+        assert delays[2] >= 0.36  # exponential increase (0.4) with jitter
+        # Check increasing pattern (allowing for jitter)
+        assert delays[1] > delays[0] * 1.5  # Should roughly double
+        assert delays[2] > delays[1] * 1.5  # Should roughly double
 
     def test_jitter_applied_to_delays(self, retry_handler):
         """Test that jitter is applied to backoff delays."""
@@ -166,8 +170,8 @@ class TestRetryHandler:
             with pytest.raises(RetryExhaustedException):
                 handler.execute_with_retry(mock_func)
 
-        # All delays should be capped at max_delay
-        assert all(delay <= 2.1 for delay in delays)  # Allow for jitter
+        # All delays should be capped at max_delay plus jitter (10%)
+        assert all(delay <= 2.2 for delay in delays)  # max_delay (2.0) + 10% jitter
 
     def test_retry_exhausted_exception(self, retry_handler):
         """Test RetryExhaustedException after max retries."""

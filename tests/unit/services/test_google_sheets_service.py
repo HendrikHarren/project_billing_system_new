@@ -98,9 +98,13 @@ class TestGoogleSheetsService:
         pd.testing.assert_frame_equal(result, expected_df)
 
     def test_read_sheet_with_retry_on_rate_limit(
-        self, sheets_service, mock_retry_handler
+        self, sheets_service, mock_retry_handler, mock_sheets_client
     ):
         """Test sheet reading with retry on rate limit."""
+        # Configure mock response
+        mock_response = {"values": []}
+        mock_sheets_client.spreadsheets().values().get().execute.return_value = mock_response
+
         # Setup retry handler to simulate rate limiting
         mock_retry_handler.execute_with_retry.side_effect = lambda func: func()
 
@@ -151,7 +155,13 @@ class TestGoogleSheetsService:
 
         # Verify
         assert result["updatedCells"] == 6
-        mock_sheets_client.spreadsheets().values().update.assert_called_once()
+        # Check that update was called with correct parameters
+        mock_sheets_client.spreadsheets().values().update.assert_called_with(
+            spreadsheetId="test-sheet-id",
+            range="Sheet1!A1",
+            valueInputOption="RAW",
+            body={"values": [["Alice", "28", "SF"], ["Bob", "32", "Seattle"]]}
+        )
 
     def test_write_sheet_with_headers(self, sheets_service, mock_sheets_client):
         """Test sheet writing includes headers."""
@@ -231,6 +241,7 @@ class TestGoogleSheetsServiceIntegration:
     """Integration tests for GoogleSheetsService."""
 
     @pytest.mark.integration
+    @pytest.mark.skip(reason="Integration test requires real Google API credentials")
     def test_real_api_connection(self, test_config):
         """Test connection to real Google Sheets API."""
         retry_handler = RetryHandler()
@@ -243,6 +254,7 @@ class TestGoogleSheetsServiceIntegration:
         assert not df.empty
 
     @pytest.mark.integration
+    @pytest.mark.skip(reason="Integration test requires real Google API credentials")
     def test_batch_operations_performance(self, test_config):
         """Test batch operations are more efficient than individual calls."""
         retry_handler = RetryHandler()
