@@ -96,8 +96,12 @@ class TestImportStructure:
     def test_config_module_imports(self):
         """Test that configuration module imports work."""
         # Test main config imports
-        from src.config import (BillingSystemConfig, get_config, load_config,
-                                reload_config)
+        from src.config import (
+            BillingSystemConfig,
+            get_config,
+            load_config,
+            reload_config,
+        )
 
         # Test that functions are callable
         assert callable(get_config)

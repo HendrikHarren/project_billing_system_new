@@ -8,8 +8,12 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
-from src.config.settings import (BillingSystemConfig, get_config, load_config,
-                                 reload_config)
+from src.config.settings import (
+    BillingSystemConfig,
+    get_config,
+    load_config,
+    reload_config,
+)
 
 
 class TestBillingSystemConfig:
@@ -201,10 +205,12 @@ class TestConfigurationFunctions:
                 config = load_config()
                 # If this succeeds, it means there are defaults or the env is not fully cleared
                 # This is acceptable behavior - just verify it's a valid config
-                assert hasattr(config, 'google_project_id')
+                assert hasattr(config, "google_project_id")
             except ValidationError as exc_info:
                 # If it fails, should be due to missing required fields
-                assert "field required" in str(exc_info) or "Field required" in str(exc_info)
+                assert "field required" in str(exc_info) or "Field required" in str(
+                    exc_info
+                )
 
 
 class TestConfigurationEdgeCases:

@@ -9,8 +9,11 @@ from unittest.mock import Mock, patch
 import pytest
 from googleapiclient.errors import HttpError
 
-from src.services.retry_handler import (CircuitBreakerError,
-                                        RetryExhaustedException, RetryHandler)
+from src.services.retry_handler import (
+    CircuitBreakerError,
+    RetryExhaustedException,
+    RetryHandler,
+)
 
 
 class TestRetryHandler:
@@ -137,8 +140,9 @@ class TestRetryHandler:
 
         with patch("time.sleep") as mock_sleep:
             mock_sleep.side_effect = lambda delay: delays.append(delay)
-            with patch("random.uniform") as mock_uniform:
-                mock_uniform.return_value = 0.05  # Fixed jitter for testing
+            with patch("secrets.SystemRandom") as mock_system_random:
+                mock_uniform = Mock(return_value=0.05)  # Fixed jitter for testing
+                mock_system_random.return_value.uniform = mock_uniform
 
                 mock_func = Mock()
                 server_error = HttpError(resp=Mock(status=500), content=b"Server Error")

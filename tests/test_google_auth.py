@@ -7,8 +7,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.google_auth import (get_credentials, get_drive_service,
-                             get_sheets_service, load_credentials)
+from src.google_auth import (
+    get_credentials,
+    get_drive_service,
+    get_sheets_service,
+    load_credentials,
+)
 
 
 class TestGoogleAuth:

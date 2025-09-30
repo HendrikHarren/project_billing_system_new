@@ -29,7 +29,9 @@ class TestGoogleDriveService:
     def mock_retry_handler(self):
         """Mock retry handler."""
         mock_handler = Mock(spec=RetryHandler)
-        mock_handler.execute_with_retry.side_effect = lambda func, *args, **kwargs: func(*args, **kwargs)
+        mock_handler.execute_with_retry.side_effect = (
+            lambda func, *args, **kwargs: func(*args, **kwargs)
+        )
         return mock_handler
 
     @pytest.fixture
@@ -326,7 +328,9 @@ class TestGoogleDriveServiceErrorHandling:
     def mock_retry_handler(self):
         """Mock retry handler."""
         mock_handler = Mock(spec=RetryHandler)
-        mock_handler.execute_with_retry.side_effect = lambda func, *args, **kwargs: func(*args, **kwargs)
+        mock_handler.execute_with_retry.side_effect = (
+            lambda func, *args, **kwargs: func(*args, **kwargs)
+        )
         return mock_handler
 
     @pytest.fixture

@@ -32,7 +32,9 @@ class TestGoogleSheetsService:
     def mock_retry_handler(self):
         """Mock retry handler."""
         mock_handler = Mock(spec=RetryHandler)
-        mock_handler.execute_with_retry.side_effect = lambda func, *args, **kwargs: func(*args, **kwargs)
+        mock_handler.execute_with_retry.side_effect = (
+            lambda func, *args, **kwargs: func(*args, **kwargs)
+        )
         return mock_handler
 
     @pytest.fixture
@@ -103,7 +105,9 @@ class TestGoogleSheetsService:
         """Test sheet reading with retry on rate limit."""
         # Configure mock response
         mock_response = {"values": []}
-        mock_sheets_client.spreadsheets().values().get().execute.return_value = mock_response
+        mock_sheets_client.spreadsheets().values().get().execute.return_value = (
+            mock_response
+        )
 
         # Setup retry handler to simulate rate limiting
         mock_retry_handler.execute_with_retry.side_effect = lambda func: func()
@@ -160,7 +164,7 @@ class TestGoogleSheetsService:
             spreadsheetId="test-sheet-id",
             range="Sheet1!A1",
             valueInputOption="RAW",
-            body={"values": [["Alice", "28", "SF"], ["Bob", "32", "Seattle"]]}
+            body={"values": [["Alice", "28", "SF"], ["Bob", "32", "Seattle"]]},
         )
 
     def test_write_sheet_with_headers(self, sheets_service, mock_sheets_client):

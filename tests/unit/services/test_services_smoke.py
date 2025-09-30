@@ -110,9 +110,11 @@ class TestServicesSmoke:
         """Test that all services can be imported successfully."""
         from src.services.google_drive_service import GoogleDriveService
         from src.services.google_sheets_service import GoogleSheetsService
-        from src.services.retry_handler import (CircuitBreakerError,
-                                                RetryExhaustedException,
-                                                RetryHandler)
+        from src.services.retry_handler import (
+            CircuitBreakerError,
+            RetryExhaustedException,
+            RetryHandler,
+        )
 
         # Verify all classes are available
         assert RetryHandler is not None

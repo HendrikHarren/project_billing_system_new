@@ -3,7 +3,7 @@ Retry handler with exponential backoff, jitter, and circuit breaker pattern.
 """
 
 import logging
-import random
+import secrets
 import socket
 import threading
 import time
@@ -122,8 +122,9 @@ class RetryHandler:
         # Apply maximum delay cap
         delay = min(delay, self.max_delay)
 
-        # Add jitter
-        jitter = random.uniform(-self.jitter_factor, self.jitter_factor) * delay
+        # Add jitter using cryptographically secure random
+        random_gen = secrets.SystemRandom()
+        jitter = random_gen.uniform(-self.jitter_factor, self.jitter_factor) * delay
         delay = max(0, delay + jitter)
 
         return delay
