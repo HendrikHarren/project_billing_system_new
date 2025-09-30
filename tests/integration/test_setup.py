@@ -3,7 +3,6 @@ Integration tests for project setup and infrastructure.
 """
 
 import importlib
-import os
 import sys
 from pathlib import Path
 

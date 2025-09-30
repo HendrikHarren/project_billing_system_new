@@ -2,7 +2,6 @@
 Unit tests for retry handler with exponential backoff and circuit breaker.
 """
 
-import asyncio
 import time
 from unittest.mock import Mock, patch
 
@@ -359,7 +358,6 @@ class TestRetryHandler:
     def test_thread_safety(self, retry_handler):
         """Test retry handler is thread-safe."""
         import threading
-        import time
 
         results = []
         errors = []

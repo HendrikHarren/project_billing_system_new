@@ -2,7 +2,6 @@
 Unit tests for Google Drive service.
 """
 
-from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
 import pytest

@@ -2,8 +2,7 @@
 Unit tests for Google Sheets service.
 """
 
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pandas as pd
 import pytest
