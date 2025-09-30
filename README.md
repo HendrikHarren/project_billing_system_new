@@ -75,12 +75,23 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture docum
 # Install development dependencies
 pip install -r requirements-dev.txt
 
-# Install pre-commit hooks
+# Install pre-commit hooks (automatic code formatting)
 pre-commit install
 
 # Run quality checks
 pre-commit run --all-files
 ```
+
+### Automated Code Quality
+
+This project features **automatic code optimization and quality enforcement**:
+
+- 🔧 **Pre-commit hooks** - Auto-format code before every commit
+- 🛡️ **Branch protection** - CI pipeline must pass before merging
+- ✅ **CI/CD integration** - Automatic validation on every push
+- 📋 **Consistent standards** - Black, isort, flake8, mypy enforcement
+
+See [Automated Workflow Guide](docs/AUTOMATED_WORKFLOW.md) for complete details.
 
 ### Running Tests
 
@@ -179,6 +190,7 @@ Development is tracked through GitHub issues organized by phases:
 - [Architecture Overview](docs/ARCHITECTURE.md) - System design and data flow
 - [Development Plan](DEVELOPMENT_PLAN.md) - Complete project roadmap
 - [Setup Guide](docs/README.md) - Detailed setup and usage instructions
+- [Automated Workflow](docs/AUTOMATED_WORKFLOW.md) - Code quality and CI/CD automation
 
 ## 🛠️ Tech Stack
 
