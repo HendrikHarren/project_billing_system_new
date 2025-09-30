@@ -14,7 +14,8 @@ from src.google_auth import (get_credentials, get_drive_service,
 class TestGoogleAuth:
     """Test cases for Google authentication."""
 
-    def test_load_credentials_missing_env_var(self):
+    @patch("src.google_auth.load_dotenv")
+    def test_load_credentials_missing_env_var(self, mock_load_dotenv):
         """Test that missing environment variables raise ValueError."""
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(

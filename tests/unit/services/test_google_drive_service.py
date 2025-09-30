@@ -28,15 +28,29 @@ class TestGoogleDriveService:
     @pytest.fixture
     def mock_retry_handler(self):
         """Mock retry handler."""
-        return Mock(spec=RetryHandler)
+        mock_handler = Mock(spec=RetryHandler)
+        mock_handler.execute_with_retry.side_effect = lambda func, *args, **kwargs: func(*args, **kwargs)
+        return mock_handler
 
     @pytest.fixture
     def drive_service(self, mock_drive_client, mock_retry_handler):
         """GoogleDriveService instance with mocked dependencies."""
-        with patch("src.services.google_drive_service.build") as mock_build:
-            mock_build.return_value = mock_drive_client
-            service = GoogleDriveService(retry_handler=mock_retry_handler)
-            return service
+        build_patcher = patch("src.services.google_drive_service.build")
+        auth_patcher = patch("google.auth.default")
+
+        mock_build = build_patcher.start()
+        mock_auth = auth_patcher.start()
+
+        mock_credentials = Mock()
+        mock_auth.return_value = (mock_credentials, "test-project")
+        mock_build.return_value = mock_drive_client
+
+        service = GoogleDriveService(retry_handler=mock_retry_handler)
+
+        yield service
+
+        build_patcher.stop()
+        auth_patcher.stop()
 
     def test_service_initialization(self, mock_retry_handler):
         """Test service initializes with proper authentication."""

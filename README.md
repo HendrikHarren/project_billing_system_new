@@ -88,12 +88,27 @@ pre-commit run --all-files
 # All tests with coverage
 pytest --cov=src
 
-# Unit tests only
-pytest -m unit
+# Unit tests only (isolated, no external dependencies)
+pytest tests/unit/
 
 # Integration tests (requires API access)
-pytest -m integration
+pytest tests/integration/
+
+# Smoke tests (quick verification)
+pytest tests/unit/services/test_services_smoke.py
+
+# Run specific test file
+pytest tests/unit/services/test_google_drive_service.py -v
 ```
+
+#### Test Architecture
+
+- **Unit Tests**: Fully mocked, no external API calls
+- **Integration Tests**: Require real Google API credentials
+- **Service Tests**: Use proper mocking patterns with patch cleanup
+- **Configuration Tests**: Environment variable isolation
+
+All unit tests use proper mocking to ensure fast, isolated execution without external dependencies.
 
 ### Code Quality
 

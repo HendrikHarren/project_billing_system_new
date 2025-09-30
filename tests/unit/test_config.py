@@ -96,20 +96,12 @@ class TestBillingSystemConfig:
     )
     def test_invalid_log_level_validation(self, mock_env, invalid_log_level):
         """Test log level validation with invalid values."""
-        with pytest.raises(ValidationError) as exc_info:
-            BillingSystemConfig(
-                google_project_id="test",
-                google_private_key_id="test",
-                google_private_key="-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n",
-                google_client_email="test@test.com",
-                google_client_id="test",
-                google_client_x509_cert_url="https://test.com",
-                google_subject_email="test@test.com",
-                timesheet_folder_id="test",
-                project_terms_file_id="test",
-                monthly_invoicing_folder_id="test",
-                log_level=invalid_log_level,
-            )
+        test_env = mock_env.copy()
+        test_env["LOG_LEVEL"] = invalid_log_level
+
+        with patch.dict(os.environ, test_env):
+            with pytest.raises(ValidationError) as exc_info:
+                BillingSystemConfig()
 
         assert "Log level must be one of" in str(exc_info.value)
 
@@ -125,39 +117,23 @@ class TestBillingSystemConfig:
     )
     def test_valid_log_level_normalization(self, mock_env, valid_log_level, expected):
         """Test log level validation with valid values."""
-        config = BillingSystemConfig(
-            google_project_id="test",
-            google_private_key_id="test",
-            google_private_key="-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n",
-            google_client_email="test@test.com",
-            google_client_id="test",
-            google_client_x509_cert_url="https://test.com",
-            google_subject_email="test@test.com",
-            timesheet_folder_id="test",
-            project_terms_file_id="test",
-            monthly_invoicing_folder_id="test",
-            log_level=valid_log_level,
-        )
+        test_env = mock_env.copy()
+        test_env["LOG_LEVEL"] = valid_log_level
+
+        with patch.dict(os.environ, test_env):
+            config = BillingSystemConfig()
 
         assert config.log_level == expected
 
     @pytest.mark.parametrize("invalid_environment", ["staging", "prod", "dev", "test"])
     def test_invalid_environment_validation(self, mock_env, invalid_environment):
         """Test environment validation with invalid values."""
-        with pytest.raises(ValidationError) as exc_info:
-            BillingSystemConfig(
-                google_project_id="test",
-                google_private_key_id="test",
-                google_private_key="-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n",
-                google_client_email="test@test.com",
-                google_client_id="test",
-                google_client_x509_cert_url="https://test.com",
-                google_subject_email="test@test.com",
-                timesheet_folder_id="test",
-                project_terms_file_id="test",
-                monthly_invoicing_folder_id="test",
-                environment=invalid_environment,
-            )
+        test_env = mock_env.copy()
+        test_env["ENVIRONMENT"] = invalid_environment
+
+        with patch.dict(os.environ, test_env):
+            with pytest.raises(ValidationError) as exc_info:
+                BillingSystemConfig()
 
         assert "Environment must be one of" in str(exc_info.value)
 
@@ -173,19 +149,11 @@ class TestBillingSystemConfig:
         self, mock_env, valid_environment, expected
     ):
         """Test environment validation with valid values."""
-        config = BillingSystemConfig(
-            google_project_id="test",
-            google_private_key_id="test",
-            google_private_key="-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n",
-            google_client_email="test@test.com",
-            google_client_id="test",
-            google_client_x509_cert_url="https://test.com",
-            google_subject_email="test@test.com",
-            timesheet_folder_id="test",
-            project_terms_file_id="test",
-            monthly_invoicing_folder_id="test",
-            environment=valid_environment,
-        )
+        test_env = mock_env.copy()
+        test_env["ENVIRONMENT"] = valid_environment
+
+        with patch.dict(os.environ, test_env):
+            config = BillingSystemConfig()
 
         assert config.environment == expected
 
@@ -242,7 +210,8 @@ class TestConfigurationFunctions:
         assert config2.google_project_id == "new-project-id"
         assert config1 is not config2
 
-    def test_missing_required_env_vars(self):
+    @patch("src.config.settings.load_dotenv")
+    def test_missing_required_env_vars(self, mock_load_dotenv):
         """Test behavior when required environment variables are missing."""
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValidationError) as exc_info:
