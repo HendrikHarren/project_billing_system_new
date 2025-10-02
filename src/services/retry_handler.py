@@ -167,7 +167,6 @@ class RetryHandler:
                 not self._circuit_breaker_open
                 and self._failure_count >= self.circuit_breaker_threshold
             ):
-
                 logger.warning(
                     f"Circuit breaker opened after {self._failure_count} failures"
                 )
@@ -255,7 +254,9 @@ class RetryHandler:
 
         # This should never be reached, but just in case
         self._record_failure()
-        raise last_exception
+        if last_exception is not None:
+            raise last_exception
+        raise RuntimeError("Unexpected: No exception recorded")
 
     def get_retry_statistics(self) -> dict:
         """

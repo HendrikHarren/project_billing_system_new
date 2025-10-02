@@ -101,13 +101,17 @@ class GoogleDriveService:
         query = " and ".join(query_parts)
 
         def _list_operation():
+            fields = (
+                "nextPageToken, files(id, name, mimeType, size, "
+                "modifiedTime, createdTime, parents)"
+            )
             return (
                 self._service.files()
                 .list(
                     q=query,
                     pageSize=page_size,
                     pageToken=page_token,
-                    fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, createdTime, parents)",
+                    fields=fields,
                 )
                 .execute()
             )
@@ -155,11 +159,15 @@ class GoogleDriveService:
             return self._metadata_cache[file_id]
 
         def _metadata_operation():
+            fields = (
+                "id, name, mimeType, size, modifiedTime, createdTime, "
+                "parents, properties"
+            )
             return (
                 self._service.files()
                 .get(
                     fileId=file_id,
-                    fields="id, name, mimeType, size, modifiedTime, createdTime, parents, properties",
+                    fields=fields,
                 )
                 .execute()
             )
@@ -213,11 +221,14 @@ class GoogleDriveService:
         query = " and ".join(query_parts)
 
         def _search_operation():
+            fields = (
+                "files(id, name, mimeType, size, modifiedTime, " "createdTime, parents)"
+            )
             return (
                 self._service.files()
                 .list(
                     q=query,
-                    fields="files(id, name, mimeType, size, modifiedTime, createdTime, parents)",
+                    fields=fields,
                 )
                 .execute()
             )
@@ -272,10 +283,13 @@ class GoogleDriveService:
         """
         try:
             # Get Excel files that contain "Timesheet" in the name
+            excel_mime = (
+                "application/vnd.openxmlformats-officedocument." "spreadsheetml.sheet"
+            )
             timesheet_files = self.search_files_by_name_pattern(
                 "Timesheet_",
                 parent_folder_id=folder_id,
-                mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                mime_type=excel_mime,
             )
 
             # Sort by modification time (newest first)
@@ -321,11 +335,14 @@ class GoogleDriveService:
         query = " and ".join(query_parts)
 
         def _search_operation():
+            fields = (
+                "files(id, name, mimeType, size, modifiedTime, " "createdTime, parents)"
+            )
             return (
                 self._service.files()
                 .list(
                     q=query,
-                    fields="files(id, name, mimeType, size, modifiedTime, createdTime, parents)",
+                    fields=fields,
                 )
                 .execute()
             )
@@ -358,13 +375,15 @@ class GoogleDriveService:
             HttpError: If API request fails
         """
         # Look for both Google Sheets and Excel files
-        google_sheets = self.list_files_in_folder(
-            folder_id, mime_type="application/vnd.google-apps.spreadsheet"
-        )
+        sheets_mime = "application/vnd.google-apps.spreadsheet"
+        google_sheets = self.list_files_in_folder(folder_id, mime_type=sheets_mime)
 
+        excel_mime = (
+            "application/vnd.openxmlformats-officedocument." "spreadsheetml.sheet"
+        )
         excel_files = self.list_files_in_folder(
             folder_id,
-            mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            mime_type=excel_mime,
         )
 
         all_spreadsheets = google_sheets + excel_files

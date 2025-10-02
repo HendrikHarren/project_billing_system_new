@@ -202,11 +202,15 @@ class TestDevelopmentWorkflow:
     def test_coverage_configuration(self):
         """Test that coverage is configured correctly."""
         # This test runs pytest with coverage to ensure it's working
+        test_path = (
+            "tests/unit/test_config.py::TestBillingSystemConfig::"
+            "test_config_with_valid_env_vars"
+        )
         exit_code = pytest.main(
             [
                 "--cov=src",
                 "--cov-report=term",
-                "tests/unit/test_config.py::TestBillingSystemConfig::test_config_with_valid_env_vars",
+                test_path,
                 "-v",
             ]
         )

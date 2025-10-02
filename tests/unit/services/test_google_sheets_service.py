@@ -64,6 +64,7 @@ class TestGoogleSheetsService:
                 mock_auth.return_value = (mock_credentials, "test-project")
 
                 service = GoogleSheetsService(retry_handler=mock_retry_handler)
+                assert service is not None
 
                 mock_auth.assert_called_once_with(
                     scopes=["https://www.googleapis.com/auth/spreadsheets"]
@@ -262,6 +263,7 @@ class TestGoogleSheetsServiceIntegration:
         """Test batch operations are more efficient than individual calls."""
         retry_handler = RetryHandler()
         service = GoogleSheetsService(retry_handler=retry_handler)
+        assert service is not None
 
         # This test would measure performance of batch vs individual operations
         # Implementation depends on having test data available
@@ -270,6 +272,42 @@ class TestGoogleSheetsServiceIntegration:
 
 class TestGoogleSheetsServiceErrorHandling:
     """Test error handling scenarios."""
+
+    @pytest.fixture
+    def mock_sheets_client(self):
+        """Mock Google Sheets API client."""
+        mock_client = Mock()
+        mock_spreadsheets = Mock()
+        mock_client.spreadsheets.return_value = mock_spreadsheets
+        return mock_client
+
+    @pytest.fixture
+    def mock_retry_handler(self):
+        """Mock retry handler."""
+        mock_handler = Mock(spec=RetryHandler)
+        mock_handler.execute_with_retry.side_effect = (
+            lambda func, *args, **kwargs: func(*args, **kwargs)
+        )
+        return mock_handler
+
+    @pytest.fixture
+    def sheets_service(self, mock_sheets_client, mock_retry_handler):
+        """GoogleSheetsService instance with mocked dependencies."""
+        build_patcher = patch("src.services.google_sheets_service.build")
+        auth_patcher = patch("google.auth.default")
+
+        mock_build = build_patcher.start()
+        mock_auth = auth_patcher.start()
+
+        mock_build.return_value = mock_sheets_client
+        mock_auth.return_value = (Mock(), "test-project")
+
+        service = GoogleSheetsService(retry_handler=mock_retry_handler)
+
+        yield service
+
+        build_patcher.stop()
+        auth_patcher.stop()
 
     def test_quota_exceeded_handling(self, sheets_service, mock_retry_handler):
         """Test handling of quota exceeded errors."""

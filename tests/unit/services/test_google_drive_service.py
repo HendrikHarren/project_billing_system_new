@@ -61,6 +61,7 @@ class TestGoogleDriveService:
                 mock_auth.return_value = (mock_credentials, "test-project")
 
                 service = GoogleDriveService(retry_handler=mock_retry_handler)
+                assert service is not None
 
                 mock_auth.assert_called_once_with(
                     scopes=["https://www.googleapis.com/auth/drive.readonly"]
@@ -76,13 +77,13 @@ class TestGoogleDriveService:
                 {
                     "id": "file1",
                     "name": "Timesheet_2024_01.xlsx",
-                    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # noqa: E501
                     "modifiedTime": "2024-01-15T10:30:00Z",
                 },
                 {
                     "id": "file2",
                     "name": "Timesheet_2024_02.xlsx",
-                    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # noqa: E501
                     "modifiedTime": "2024-02-15T10:30:00Z",
                 },
             ],
@@ -125,7 +126,7 @@ class TestGoogleDriveService:
                 {
                     "id": "file1",
                     "name": "Timesheet.xlsx",
-                    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # noqa: E501
                 }
             ]
         }
@@ -133,8 +134,9 @@ class TestGoogleDriveService:
 
         result = drive_service.list_files_in_folder(
             "test-folder-id",
-            mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # noqa: E501
         )
+        assert result is not None
 
         # Verify filter was applied in query
         call_args = mock_drive_client.files().list.call_args
@@ -146,7 +148,7 @@ class TestGoogleDriveService:
         mock_response = {
             "id": "file123",
             "name": "Test_File.xlsx",
-            "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # noqa: E501
             "size": "1024",
             "modifiedTime": "2024-01-15T10:30:00Z",
             "createdTime": "2024-01-01T09:00:00Z",
@@ -404,12 +406,48 @@ class TestGoogleDriveServiceErrorHandling:
 class TestGoogleDriveServiceCaching:
     """Test caching behavior for performance optimization."""
 
+    @pytest.fixture
+    def mock_drive_client(self):
+        """Mock Google Drive API client."""
+        mock_client = Mock()
+        mock_files = Mock()
+        mock_client.files.return_value = mock_files
+        return mock_client
+
+    @pytest.fixture
+    def mock_retry_handler(self):
+        """Mock retry handler."""
+        mock_handler = Mock(spec=RetryHandler)
+        mock_handler.execute_with_retry.side_effect = (
+            lambda func, *args, **kwargs: func(*args, **kwargs)
+        )
+        return mock_handler
+
+    @pytest.fixture
+    def drive_service(self, mock_drive_client, mock_retry_handler):
+        """GoogleDriveService instance with mocked dependencies."""
+        build_patcher = patch("src.services.google_drive_service.build")
+        auth_patcher = patch("google.auth.default")
+
+        mock_build = build_patcher.start()
+        mock_auth = auth_patcher.start()
+
+        mock_build.return_value = mock_drive_client
+        mock_auth.return_value = (Mock(), "test-project")
+
+        service = GoogleDriveService(retry_handler=mock_retry_handler)
+
+        yield service
+
+        build_patcher.stop()
+        auth_patcher.stop()
+
     def test_metadata_caching(self, drive_service, mock_drive_client):
         """Test that file metadata is cached appropriately."""
         mock_response = {
             "id": "file123",
             "name": "Test_File.xlsx",
-            "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # noqa: E501
         }
         mock_drive_client.files().get().execute.return_value = mock_response
 

@@ -3,8 +3,10 @@ Simple script to test Google API connection and list timesheet files.
 This is our MVP test to verify access to input and output files.
 """
 import os
-from src.google_auth import get_drive_service, get_sheets_service
+
 from dotenv import load_dotenv
+
+from src.google_auth import get_drive_service, get_sheets_service
 
 
 def test_drive_connection():
@@ -13,21 +15,27 @@ def test_drive_connection():
 
     try:
         drive_service = get_drive_service()
-        timesheet_folder_id = os.getenv('TIMESHEET_FOLDER_ID')
+        timesheet_folder_id = os.getenv("TIMESHEET_FOLDER_ID")
 
         print(f"Listing files in timesheet folder: {timesheet_folder_id}")
 
         # List files in the timesheet folder
-        response = drive_service.files().list(
-            q=f"'{timesheet_folder_id}' in parents",
-            fields='files(id, name, modifiedTime)'
-        ).execute()
+        response = (
+            drive_service.files()
+            .list(
+                q=f"'{timesheet_folder_id}' in parents",
+                fields="files(id, name, modifiedTime)",
+            )
+            .execute()
+        )
 
-        files = response.get('files', [])
+        files = response.get("files", [])
         print(f"Found {len(files)} files:")
 
         for file in files:
-            print(f"  - {file['name']} (ID: {file['id']}, Modified: {file['modifiedTime']})")
+            print(
+                f"  - {file['name']} (ID: {file['id']}, Modified: {file['modifiedTime']})"
+            )
 
         return files
 
@@ -44,18 +52,22 @@ def test_sheets_connection(file_id: str):
         sheets_service = get_sheets_service()
 
         # Get spreadsheet properties
-        sheet_properties = sheets_service.spreadsheets().get(spreadsheetId=file_id).execute()
-        sheet_title = sheet_properties['properties']['title']
+        sheet_properties = (
+            sheets_service.spreadsheets().get(spreadsheetId=file_id).execute()
+        )
+        sheet_title = sheet_properties["properties"]["title"]
         print(f"Spreadsheet title: {sheet_title}")
 
         # Read timesheet data
-        range_name = 'Timesheet!A:H'
-        result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=file_id,
-            range=range_name
-        ).execute()
+        range_name = "Timesheet!A:H"
+        result = (
+            sheets_service.spreadsheets()
+            .values()
+            .get(spreadsheetId=file_id, range=range_name)
+            .execute()
+        )
 
-        values = result.get('values', [])
+        values = result.get("values", [])
         print(f"Found {len(values)} rows of data")
 
         if values:
@@ -76,26 +88,30 @@ def test_project_terms():
 
     try:
         sheets_service = get_sheets_service()
-        project_terms_file_id = os.getenv('PROJECT_TERMS_FILE_ID')
+        project_terms_file_id = os.getenv("PROJECT_TERMS_FILE_ID")
 
         # Read main terms
-        main_result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=project_terms_file_id,
-            range='Main terms!A:G'
-        ).execute()
+        main_result = (
+            sheets_service.spreadsheets()
+            .values()
+            .get(spreadsheetId=project_terms_file_id, range="Main terms!A:G")
+            .execute()
+        )
 
-        main_terms = main_result.get('values', [])
+        main_terms = main_result.get("values", [])
         print(f"Main terms: {len(main_terms)} rows")
         if main_terms:
             print("Main terms headers:", main_terms[0])
 
         # Read trip terms
-        trip_result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=project_terms_file_id,
-            range='Trip terms!A:C'
-        ).execute()
+        trip_result = (
+            sheets_service.spreadsheets()
+            .values()
+            .get(spreadsheetId=project_terms_file_id, range="Trip terms!A:C")
+            .execute()
+        )
 
-        trip_terms = trip_result.get('values', [])
+        trip_terms = trip_result.get("values", [])
         print(f"Trip terms: {len(trip_terms)} rows")
         if trip_terms:
             print("Trip terms headers:", trip_terms[0])
@@ -117,7 +133,7 @@ if __name__ == "__main__":
 
     # Test Sheets connection with first file found
     if files:
-        test_sheets_connection(files[0]['id'])
+        test_sheets_connection(files[0]["id"])
 
     # Test project terms
     test_project_terms()

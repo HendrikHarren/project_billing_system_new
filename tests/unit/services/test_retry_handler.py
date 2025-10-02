@@ -2,7 +2,6 @@
 Unit tests for retry handler with exponential backoff and circuit breaker.
 """
 
-import time
 from unittest.mock import Mock, patch
 
 import pytest
@@ -358,21 +357,30 @@ class TestRetryHandler:
     def test_thread_safety(self, retry_handler):
         """Test retry handler is thread-safe."""
         import threading
+        import time
 
         results = []
         errors = []
+        call_count = {"count": 0}
+        lock = threading.Lock()
 
-        def worker():
+        def worker(worker_id):
             try:
-                mock_func = Mock(
-                    return_value=f"success-{threading.current_thread().ident}"
-                )
-                result = retry_handler.execute_with_retry(mock_func)
-                results.append(result)
-            except Exception as e:
-                errors.append(e)
 
-        threads = [threading.Thread(target=worker) for _ in range(10)]
+                def func_to_retry():
+                    with lock:
+                        call_count["count"] += 1
+                    time.sleep(0.001)  # Small delay to ensure threads overlap
+                    return f"success-worker-{worker_id}"
+
+                result = retry_handler.execute_with_retry(func_to_retry)
+                with lock:
+                    results.append(result)
+            except Exception as e:
+                with lock:
+                    errors.append(e)
+
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(10)]
 
         for thread in threads:
             thread.start()
@@ -380,9 +388,14 @@ class TestRetryHandler:
         for thread in threads:
             thread.join()
 
-        assert len(results) == 10
-        assert len(errors) == 0
-        assert len(set(results)) == 10  # All results should be unique
+        assert len(results) == 10, f"Expected 10 results, got {len(results)}"
+        assert len(errors) == 0, f"Expected no errors, got {errors}"
+        assert (
+            len(set(results)) == 10
+        ), f"Expected 10 unique results, got {len(set(results))}: {set(results)}"
+        assert (
+            call_count["count"] == 10
+        ), f"Expected 10 calls, got {call_count['count']}"
 
 
 class TestRetryHandlerIntegration:
@@ -392,6 +405,7 @@ class TestRetryHandlerIntegration:
     def test_real_api_retry_behavior(self, test_config):
         """Test retry behavior with real API calls."""
         handler = RetryHandler(max_retries=2, base_delay=0.1)
+        assert handler is not None
 
         # This would test with real API that might return rate limits
         # Implementation depends on test environment setup
@@ -401,6 +415,7 @@ class TestRetryHandlerIntegration:
     def test_performance_under_load(self):
         """Test retry handler performance under concurrent load."""
         handler = RetryHandler()
+        assert handler is not None
 
         # Simulate high load scenario
         # Implementation depends on performance requirements
