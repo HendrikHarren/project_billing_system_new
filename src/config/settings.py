@@ -106,7 +106,7 @@ class BillingSystemConfig(BaseSettings):
 def load_config(env_file: Optional[str] = None) -> BillingSystemConfig:
     """Load configuration from environment variables and .env file."""
     if env_file:
-        load_dotenv(env_file)
+        load_dotenv(env_file, override=True)
     else:
         load_dotenv()
 

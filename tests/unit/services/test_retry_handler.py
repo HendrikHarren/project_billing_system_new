@@ -363,9 +363,11 @@ class TestRetryHandler:
 
         def worker():
             try:
-                mock_func = Mock(
-                    return_value=f"success-{threading.current_thread().ident}"
-                )
+
+                def get_thread_result():
+                    return f"success-{threading.current_thread().ident}"
+
+                mock_func = Mock(side_effect=get_thread_result)
                 result = retry_handler.execute_with_retry(mock_func)
                 results.append(result)
             except Exception as e:
