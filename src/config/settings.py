@@ -110,7 +110,7 @@ def load_config(env_file: Optional[str] = None) -> BillingSystemConfig:
     else:
         load_dotenv()
 
-    return BillingSystemConfig()
+    return BillingSystemConfig()  # type: ignore[call-arg]
 
 
 # Global configuration instance
