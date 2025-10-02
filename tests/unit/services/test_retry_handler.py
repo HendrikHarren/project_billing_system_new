@@ -357,23 +357,30 @@ class TestRetryHandler:
     def test_thread_safety(self, retry_handler):
         """Test retry handler is thread-safe."""
         import threading
+        import time
 
         results = []
         errors = []
+        call_count = {"count": 0}
+        lock = threading.Lock()
 
-        def worker():
+        def worker(worker_id):
             try:
 
-                def get_thread_result():
-                    return f"success-{threading.current_thread().ident}"
+                def func_to_retry():
+                    with lock:
+                        call_count["count"] += 1
+                    time.sleep(0.001)  # Small delay to ensure threads overlap
+                    return f"success-worker-{worker_id}"
 
-                mock_func = Mock(side_effect=get_thread_result)
-                result = retry_handler.execute_with_retry(mock_func)
-                results.append(result)
+                result = retry_handler.execute_with_retry(func_to_retry)
+                with lock:
+                    results.append(result)
             except Exception as e:
-                errors.append(e)
+                with lock:
+                    errors.append(e)
 
-        threads = [threading.Thread(target=worker) for _ in range(10)]
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(10)]
 
         for thread in threads:
             thread.start()
@@ -381,9 +388,14 @@ class TestRetryHandler:
         for thread in threads:
             thread.join()
 
-        assert len(results) == 10
-        assert len(errors) == 0
-        assert len(set(results)) == 10  # All results should be unique
+        assert len(results) == 10, f"Expected 10 results, got {len(results)}"
+        assert len(errors) == 0, f"Expected no errors, got {errors}"
+        assert (
+            len(set(results)) == 10
+        ), f"Expected 10 unique results, got {len(set(results))}: {set(results)}"
+        assert (
+            call_count["count"] == 10
+        ), f"Expected 10 calls, got {call_count['count']}"
 
 
 class TestRetryHandlerIntegration:
