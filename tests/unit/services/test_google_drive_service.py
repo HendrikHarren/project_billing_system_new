@@ -406,6 +406,42 @@ class TestGoogleDriveServiceErrorHandling:
 class TestGoogleDriveServiceCaching:
     """Test caching behavior for performance optimization."""
 
+    @pytest.fixture
+    def mock_drive_client(self):
+        """Mock Google Drive API client."""
+        mock_client = Mock()
+        mock_files = Mock()
+        mock_client.files.return_value = mock_files
+        return mock_client
+
+    @pytest.fixture
+    def mock_retry_handler(self):
+        """Mock retry handler."""
+        mock_handler = Mock(spec=RetryHandler)
+        mock_handler.execute_with_retry.side_effect = (
+            lambda func, *args, **kwargs: func(*args, **kwargs)
+        )
+        return mock_handler
+
+    @pytest.fixture
+    def drive_service(self, mock_drive_client, mock_retry_handler):
+        """GoogleDriveService instance with mocked dependencies."""
+        build_patcher = patch("src.services.google_drive_service.build")
+        auth_patcher = patch("google.auth.default")
+
+        mock_build = build_patcher.start()
+        mock_auth = auth_patcher.start()
+
+        mock_build.return_value = mock_drive_client
+        mock_auth.return_value = (Mock(), "test-project")
+
+        service = GoogleDriveService(retry_handler=mock_retry_handler)
+
+        yield service
+
+        build_patcher.stop()
+        auth_patcher.stop()
+
     def test_metadata_caching(self, drive_service, mock_drive_client):
         """Test that file metadata is cached appropriately."""
         mock_response = {
