@@ -203,8 +203,8 @@ class TestConfigurationFunctions:
         with patch.dict(os.environ, {}, clear=True):
             try:
                 config = load_config()
-                # If this succeeds, it means there are defaults or the env is not fully cleared
-                # This is acceptable behavior - just verify it's a valid config
+                # If this succeeds, defaults exist or env not fully cleared
+                # This is acceptable - just verify it's a valid config
                 assert hasattr(config, "google_project_id")
             except ValidationError as exc_info:
                 # If it fails, should be due to missing required fields
@@ -222,7 +222,9 @@ class TestConfigurationEdgeCases:
             BillingSystemConfig(
                 google_project_id="",  # Empty string should fail validation
                 google_private_key_id="test",
-                google_private_key="-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n",
+                google_private_key=(
+                    "-----BEGIN PRIVATE KEY-----\ntest\n" "-----END PRIVATE KEY-----\n"
+                ),
                 google_client_email="test@test.com",
                 google_client_id="test",
                 google_client_x509_cert_url="https://test.com",

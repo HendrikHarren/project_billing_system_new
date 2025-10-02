@@ -64,6 +64,7 @@ class TestGoogleSheetsService:
                 mock_auth.return_value = (mock_credentials, "test-project")
 
                 service = GoogleSheetsService(retry_handler=mock_retry_handler)
+                assert service is not None
 
                 mock_auth.assert_called_once_with(
                     scopes=["https://www.googleapis.com/auth/spreadsheets"]
@@ -262,6 +263,7 @@ class TestGoogleSheetsServiceIntegration:
         """Test batch operations are more efficient than individual calls."""
         retry_handler = RetryHandler()
         service = GoogleSheetsService(retry_handler=retry_handler)
+        assert service is not None
 
         # This test would measure performance of batch vs individual operations
         # Implementation depends on having test data available

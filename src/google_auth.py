@@ -3,7 +3,7 @@ Google API authentication module for the billing system.
 """
 
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 from google.oauth2 import service_account
@@ -44,7 +44,9 @@ def load_credentials() -> Dict[str, Any]:
     }
 
 
-def get_credentials(scopes: list[str] = None) -> service_account.Credentials:
+def get_credentials(
+    scopes: Optional[list[str]] = None,
+) -> service_account.Credentials:
     """Get authenticated credentials for Google APIs."""
     if scopes is None:
         scopes = [

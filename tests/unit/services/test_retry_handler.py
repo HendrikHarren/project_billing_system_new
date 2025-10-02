@@ -2,7 +2,6 @@
 Unit tests for retry handler with exponential backoff and circuit breaker.
 """
 
-import time
 from unittest.mock import Mock, patch
 
 import pytest
@@ -392,6 +391,7 @@ class TestRetryHandlerIntegration:
     def test_real_api_retry_behavior(self, test_config):
         """Test retry behavior with real API calls."""
         handler = RetryHandler(max_retries=2, base_delay=0.1)
+        assert handler is not None
 
         # This would test with real API that might return rate limits
         # Implementation depends on test environment setup
@@ -401,6 +401,7 @@ class TestRetryHandlerIntegration:
     def test_performance_under_load(self):
         """Test retry handler performance under concurrent load."""
         handler = RetryHandler()
+        assert handler is not None
 
         # Simulate high load scenario
         # Implementation depends on performance requirements

@@ -5,8 +5,8 @@ Configuration management for the billing system.
 from typing import List, Optional
 
 from dotenv import load_dotenv
-from pydantic import ConfigDict, Field, field_validator
-from pydantic_settings import BaseSettings
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class BillingSystemConfig(BaseSettings):
@@ -54,7 +54,7 @@ class BillingSystemConfig(BaseSettings):
     max_retries: int = Field(default=3, alias="MAX_RETRIES")
     retry_delay: float = Field(default=1.0, alias="RETRY_DELAY")
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
