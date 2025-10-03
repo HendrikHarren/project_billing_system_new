@@ -3,6 +3,7 @@
 This module defines the Project and ProjectTerms models which represent
 project information and freelancer-specific billing terms.
 """
+
 from decimal import Decimal
 from typing import Union
 

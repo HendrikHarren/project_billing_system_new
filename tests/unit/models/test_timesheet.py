@@ -1,4 +1,5 @@
 """Unit tests for Timesheet model."""
+
 from datetime import date, time
 
 import pytest

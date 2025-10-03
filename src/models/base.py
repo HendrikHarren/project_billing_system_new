@@ -3,6 +3,7 @@
 This module provides a base Pydantic model with common configuration
 and helper methods for serialization/deserialization.
 """
+
 from pydantic import BaseModel, ConfigDict
 
 

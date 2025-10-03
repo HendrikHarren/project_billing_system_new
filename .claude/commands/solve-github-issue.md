@@ -15,7 +15,9 @@ Follow these steps:
 9. **Commit your changes** with a descriptive message referencing the issue number and link to the isse
 10. **Comment on the issue** with your implementation approach using `gh issue comment $ARGUMENTS`
 11. **Push your changes** to the remote repository
-12. **Close the issue** linking to all related commits
+12. **Ensure CI/CD Pipeline** executes successfully
+13. **Close the issue** linking to all related commits
+14. **Merge with Main** if not already done
 
 When implementing:
 - Follow Python best practices: Black formatting, type hints, docstrings

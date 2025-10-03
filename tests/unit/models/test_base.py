@@ -1,4 +1,5 @@
 """Unit tests for base model functionality."""
+
 from datetime import date, time
 from decimal import Decimal
 

@@ -8,6 +8,7 @@ This package contains Pydantic models for all business entities:
 - Trip: Business trip information
 - TripReimbursement: Trip reimbursement details
 """
+
 from src.models.base import BaseDataModel
 from src.models.project import Project, ProjectTerms
 from src.models.timesheet import TimesheetEntry

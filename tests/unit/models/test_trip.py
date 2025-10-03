@@ -1,4 +1,5 @@
 """Unit tests for Trip and TripReimbursement models."""
+
 from datetime import date
 from decimal import Decimal
 

@@ -1,4 +1,5 @@
 """Unit tests for Project and ProjectTerms models."""
+
 from decimal import Decimal
 
 import pytest

@@ -3,6 +3,7 @@
 This module defines the TimesheetEntry model which represents a single
 timesheet entry for a freelancer on a specific date and project.
 """
+
 import datetime as dt
 from typing import Literal, Optional
 

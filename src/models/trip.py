@@ -3,6 +3,7 @@
 This module defines the Trip and TripReimbursement models which represent
 business trips and their associated reimbursements.
 """
+
 import datetime as dt
 from decimal import Decimal
 from typing import Union
