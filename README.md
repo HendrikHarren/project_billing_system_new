@@ -141,6 +141,7 @@ The project enforces high code quality standards:
 - ✅ Test framework with comprehensive fixtures
 - ✅ CI/CD pipeline with quality checks
 - ✅ Timesheet data reading and validation (TimesheetReader)
+- ✅ Project terms reading with caching (ProjectTermsReader)
 
 ### Planned Features (Development Roadmap)
 - 🚧 Trip duration calculation (consecutive on-site days)
@@ -158,7 +159,7 @@ The project enforces high code quality standards:
 
 **Phase 2: Data Collection** 🚧 In Progress
 - [x] Timesheet reader implementation (Issue #4)
-- [ ] Project terms reader
+- [x] Project terms reader with caching (Issue #5)
 - [ ] Data validation layer
 
 **Phase 3-7**: See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for complete roadmap
@@ -216,4 +217,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Current Status**: Phase 2 Data Collection in progress 🚧 (TimesheetReader complete ✅) | Next: Project Terms Reader (Issue #5)
+**Current Status**: Phase 2 Data Collection in progress 🚧 (TimesheetReader ✅, ProjectTermsReader ✅) | Next: Data Validation Layer
