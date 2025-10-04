@@ -27,5 +27,5 @@ repos:
     rev: 6.0.0
     hooks:
       - id: flake8
-        args: [--max-line-length=88, "--extend-ignore=E203,W503,E231"]
+        args: [--max-line-length=88, "--extend-ignore=E203,W503,E231,E221"]
         exclude: ^(analyze_outputs\.py|connection_test_script\.py|conftest\.py)$
