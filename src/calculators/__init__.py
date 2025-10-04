@@ -13,6 +13,7 @@ from src.calculators.time_utils import (
     minutes_to_timedelta,
     timedelta_to_decimal_hours,
 )
+from src.calculators.trip_calculator import calculate_trips
 
 __all__ = [
     # time_calculator
@@ -26,4 +27,6 @@ __all__ = [
     "convert_time_to_minutes",
     "minutes_to_timedelta",
     "timedelta_to_decimal_hours",
+    # trip_calculator
+    "calculate_trips",
 ]
