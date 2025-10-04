@@ -143,9 +143,10 @@ The project enforces high code quality standards:
 - ✅ Timesheet data reading and validation (TimesheetReader)
 - ✅ Project terms reading with caching (ProjectTermsReader)
 - ✅ Comprehensive data validation layer with business rules
+- ✅ Time calculation engine with billable hours and travel surcharge
+- ✅ Trip duration calculator (consecutive on-site days grouping)
 
 ### Planned Features (Development Roadmap)
-- 🚧 Trip duration calculation (consecutive on-site days)
 - 🚧 Billing calculation with flexible rate structures
 - 🚧 Master timesheet generation with 4 output sheets
 - 🚧 CLI interface for report generation
