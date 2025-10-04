@@ -239,14 +239,25 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
 **Purpose**: Data combination and summary generation
 
 **Components**:
-- `timesheet_aggregator.py`: Combine multiple freelancer timesheets
-- `trip_aggregator.py`: Extract and organize trip reimbursements
-- `weekly_calculator.py`: Generate weekly capacity reports
+- `timesheet_aggregator.py`: ✅ Combine multiple freelancer timesheets
+  - Read all timesheets from Google Drive folder
+  - Merge with project billing terms for rate lookups
+  - Calculate billing for all entries using existing calculators
+  - Identify trips from consecutive on-site work
+  - Filter by date range, project code, or freelancer name
+  - Performance optimized with caching and batch processing
+  - Supports 30+ timesheets efficiently
+  - 86% test coverage with 12 unit tests
+- `trip_aggregator.py`: Extract and organize trip reimbursements (planned)
+- `weekly_calculator.py`: Generate weekly capacity reports (planned)
 
 **Key Features**:
-- Efficient large dataset processing
-- Flexible filtering and grouping
-- Memory-efficient aggregation
+- ✅ Efficient large dataset processing (350+ entries tested)
+- ✅ Flexible filtering and grouping (date range, project, freelancer)
+- ✅ Memory-efficient aggregation with lazy loading
+- ✅ Integration with existing readers and calculators
+- ✅ Comprehensive error handling and logging
+- ✅ Mock-friendly architecture for testing
 
 ### Writers Layer (`src/writers/`)
 
@@ -296,16 +307,24 @@ Raw Data ──► Time Calculator ──► Hours Calculated
 ### 3. Aggregation Phase
 
 ```
-Processed Data ──► Timesheet Aggregator ──► Master Dataset
-(Multiple            (Combine + Filter)        (9000+ rows)
- Freelancers)               │
-                           ▼
-                    Trip Aggregator ──► Trip Summary
-                    (Extract Trips)      (Reimbursements)
-                           │
-                           ▼
-                    Weekly Calculator ──► Weekly Matrix
-                    (Hours by Week)       (52 weeks × N freelancers)
+Google Drive ──► Timesheet Aggregator ──► AggregatedTimesheetData
+Folder              (Read + Merge +          (Unified Dataset:
+(30+ files)         Calculate)                - All entries
+                          │                    - Billing results
+                          │                    - Trips identified)
+                          ▼
+                   Filter Capabilities ──► Filtered Data
+                   (Date Range,             (By date/project/
+                    Project,                 freelancer)
+                    Freelancer)
+                          │
+                          ▼
+                   Trip Aggregator ──► Trip Summary (planned)
+                   (Extract Trips)      (Reimbursements)
+                          │
+                          ▼
+                   Weekly Calculator ──► Weekly Matrix (planned)
+                   (Hours by Week)       (52 weeks × N freelancers)
 ```
 
 ### 4. Output Generation Phase
