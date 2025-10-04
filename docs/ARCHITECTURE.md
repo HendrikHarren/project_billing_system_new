@@ -149,6 +149,50 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
 - ✅ In-memory caching with TTL and manual invalidation
 - ✅ Lazy loading for optimal performance
 
+### Validators Layer (`src/validators/`)
+
+**Purpose**: Data quality and business rule compliance validation
+
+**Components**:
+- `validation_report.py`: ✅ Validation issue tracking and reporting
+  - ValidationSeverity enum (INFO, WARNING, ERROR)
+  - ValidationIssue dataclass for individual issues
+  - ValidationReport for collecting and formatting issues
+  - Context support for detailed error messages
+  - 100% test coverage with 19 unit tests
+- `field_validators.py`: ✅ Field-level validation
+  - Date validation (format, range, future/old date warnings)
+  - Time validation (24-hour format)
+  - String validation (non-empty, whitespace)
+  - Numeric validation (positive, non-negative, range)
+  - Location validation (remote/onsite)
+  - Project code validation
+  - 100% test coverage with 32 unit tests
+- `business_validators.py`: ✅ Business rule validation
+  - Time range logic (normal vs overnight shifts)
+  - Break time validation (< work time, reasonableness)
+  - Profit margin validation (cost < rate)
+  - Work duration warnings (unusually long/short)
+  - Complete timesheet entry validation
+  - Complete project terms validation
+  - 100% test coverage with 24 unit tests
+- `validator.py`: ✅ Main validation orchestrator
+  - TimesheetValidator class for unified validation
+  - Single entry and batch validation
+  - Flexible validation modes (fields only, full validation)
+  - Context-aware error messages with row numbers
+  - Project terms validation
+  - 100% test coverage with 12 unit tests
+
+**Key Features**:
+- ✅ Comprehensive field and business rule validation
+- ✅ Clear, actionable error messages
+- ✅ Severity-based issue categorization (error/warning/info)
+- ✅ Flexible validation modes for different scenarios
+- ✅ Context-aware validation with row numbers and metadata
+- ✅ Graceful error handling with detailed reports
+- ✅ 100% test coverage across all validator components (87 tests)
+
 ### Calculators Layer (`src/calculators/`)
 
 **Purpose**: Core business logic for time and billing calculations

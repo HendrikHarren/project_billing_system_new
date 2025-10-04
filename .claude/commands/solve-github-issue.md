@@ -8,7 +8,7 @@ Follow these steps:
 2. **Understand the problem** by reading the issue description and any comments
 3. **Search the codebase** to locate relevant files mentioned in the issue
 4. **Plan the solution** following the project's coding standards in a TDD approach. Ask user for approval. Once approved add the plan as a comment to the github issue.
-5. **Implement the Solution** following the TDD approach. Commit completion of intermediate steps towards the solution.
+5. **Implement the Solution** following the TDD approach in a new github feature development branch. Commit completion of intermediate steps towards the solution.
 6. **Ensure high test coverage** to verify the fix works correctly
 7. **Run the test suite** with `pytest` to ensure everything (also old tests) passes
 8. **Adapt the documentation** if needed
