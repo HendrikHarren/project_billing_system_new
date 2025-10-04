@@ -1,5 +1,12 @@
 """Calculator modules for billing system."""
 
+from src.calculators.billing_calculator import (
+    AggregateBillingResult,
+    BillingResult,
+    aggregate_billing,
+    calculate_billing,
+    calculate_billing_batch,
+)
 from src.calculators.time_calculator import (
     BillableHoursResult,
     calculate_billable_amount,
@@ -16,6 +23,12 @@ from src.calculators.time_utils import (
 from src.calculators.trip_calculator import calculate_trips
 
 __all__ = [
+    # billing_calculator
+    "AggregateBillingResult",
+    "BillingResult",
+    "aggregate_billing",
+    "calculate_billing",
+    "calculate_billing_batch",
     # time_calculator
     "BillableHoursResult",
     "calculate_billable_amount",
