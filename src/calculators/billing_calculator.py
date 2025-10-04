@@ -294,15 +294,17 @@ def aggregate_billing(results: List[BillingResult]) -> AggregateBillingResult:
             entry_count=0,
         )
 
-    # Sum up all metrics
-    total_hours = sum(r.billable_hours for r in results)
-    total_billed = sum(r.total_billed for r in results)
-    total_cost = sum(r.total_cost for r in results)
-    total_profit = sum(r.profit for r in results)
+    # Sum up all metrics (using Decimal("0") as start to ensure Decimal type)
+    total_hours = sum((r.billable_hours for r in results), Decimal("0"))
+    total_billed = sum((r.total_billed for r in results), Decimal("0"))
+    total_cost = sum((r.total_cost for r in results), Decimal("0"))
+    total_profit = sum((r.profit for r in results), Decimal("0"))
 
     # Calculate average profit margin
-    sum_margins = sum(r.profit_margin_percentage for r in results)
-    average_profit_margin = (sum_margins / len(results)).quantize(Decimal("0.01"))
+    sum_margins = sum((r.profit_margin_percentage for r in results), Decimal("0"))
+    average_profit_margin = (sum_margins / Decimal(len(results))).quantize(
+        Decimal("0.01")
+    )
 
     return AggregateBillingResult(
         total_hours=total_hours,
