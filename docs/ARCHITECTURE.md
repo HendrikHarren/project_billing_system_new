@@ -211,16 +211,28 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
   - Calculate travel surcharges for on-site work
   - Decimal precision for currency calculations
   - 100% test coverage with 14 unit tests
-- `trip_calculator.py`: Consecutive day detection for trip duration (planned)
-- `billing_calculator.py`: Rate application and profit margin calculation (planned)
+- `trip_calculator.py`: ✅ Consecutive day detection for trip duration
+  - Identify consecutive on-site days for travel reimbursement
+  - Group trips by freelancer, location, and project
+  - Calculate trip durations and reimbursement amounts
+  - 94% test coverage with 11 unit tests
+- `billing_calculator.py`: ✅ Comprehensive billing and profit margin calculation
+  - Complete billing breakdown (hours, revenue, cost, profit)
+  - Rate application per freelancer-project combination
+  - Profit margin calculations
+  - Batch processing with rate lookups
+  - Aggregation of multiple billing results
+  - 98% test coverage with 16 unit tests
 
 **Key Features**:
 - ✅ Accurate overnight shift handling (00:00 = next day)
 - ✅ Travel time percentage calculations
 - ✅ Project-specific billing rules
+- ✅ Comprehensive profit margin tracking
+- ✅ Batch processing for multiple entries
 - ✅ Decimal precision for financial accuracy
 - ✅ Matches Jupyter notebook calculations exactly
-- ✅ 100% test coverage across all components (37 tests)
+- ✅ 100% test coverage across all components (53 tests)
 
 ### Aggregators Layer (`src/aggregators/`)
 
@@ -276,8 +288,9 @@ Raw Data ──► Time Calculator ──► Hours Calculated
                    │
                    ▼
             Billing Calculator ──► Financial Data
-            (Rate Application)     (Billed Amounts,
-                                   Profit Margins)
+            (Rate Application      (Complete Breakdown:
+             & Profit Margins)      Hours, Revenue, Cost,
+                                    Profit Margins)
 ```
 
 ### 3. Aggregation Phase
@@ -332,7 +345,7 @@ trip_duration = max_date_in_group - min_date_in_group + 1_day
 
 ### Billing Calculation
 
-**Implementation**: `src/calculators/time_calculator.py`
+**Implementation**: `src/calculators/billing_calculator.py` (builds on `time_calculator.py`)
 
 **Formula**:
 ```python
@@ -342,28 +355,38 @@ work_duration = end_time - start_time  # with overnight support
 # Calculate billable hours
 billable_hours = work_duration - break_time + (travel_time × travel_percentage / 100)
 
-# Calculate billable amount
+# Calculate revenue breakdown
 hours_billed = billable_hours × hourly_rate
-
-# Calculate travel surcharge (only for on-site work)
-travel_surcharge = (location == "onsite") ? billable_hours × hourly_rate × surcharge_percentage / 100 : 0
-
-# Total billing
+travel_surcharge = (location == "onsite") ? hours_billed × surcharge_percentage / 100 : 0
 total_billed = hours_billed + travel_surcharge
-agency_profit = total_billed - total_cost
+
+# Calculate cost breakdown
+total_cost = billable_hours × cost_per_hour
+
+# Calculate profit metrics
+profit = total_billed - total_cost
+profit_margin = (profit / total_billed) × 100
 ```
 
 **Example**:
 ```python
 # 8-hour shift with 30-minute break and 60 minutes travel at 50% billable
 entry = TimesheetEntry(start_time="09:00", end_time="17:00", break_minutes=30, travel_time_minutes=60)
-terms = ProjectTerms(hourly_rate=85.00, travel_time_percentage=50.0, travel_surcharge_percentage=15.0)
+terms = ProjectTerms(
+    hourly_rate=85.00,
+    travel_time_percentage=50.0,
+    travel_surcharge_percentage=15.0,
+    cost_per_hour=60.00
+)
 
 # Calculation: 8 hours - 0.5 hours + (1 hour × 0.5) = 8.0 billable hours
 billable_hours = 8.0
 hours_billed = 8.0 × 85.00 = 680.00
-travel_surcharge = 8.0 × 85.00 × 0.15 = 102.00
+travel_surcharge = 680.00 × 0.15 = 102.00
 total_billed = 680.00 + 102.00 = 782.00
+total_cost = 8.0 × 60.00 = 480.00
+profit = 782.00 - 480.00 = 302.00
+profit_margin = (302.00 / 782.00) × 100 = 38.62%
 ```
 
 ### Weekly Aggregation
