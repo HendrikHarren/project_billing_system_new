@@ -132,7 +132,13 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
   - Extracts freelancer name from sheet title
   - Gracefully handles missing and malformed data
   - 99% test coverage with 40 unit tests
-- `project_terms_reader.py`: Load project rates and billing terms (planned)
+- `project_terms_reader.py`: ✅ Load project rates and billing terms
+  - In-memory caching with configurable TTL (default: 1 hour)
+  - Loads main project terms (rates, costs, percentages)
+  - Loads trip reimbursement terms
+  - Case-sensitive freelancer-project lookups
+  - Decimal precision for financial calculations
+  - 96% test coverage with 30 unit tests
 - `base_reader.py`: Common reading functionality and error handling (planned)
 
 **Key Features**:
@@ -140,7 +146,8 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
 - ✅ Missing data handling with logging
 - ✅ Overnight shift detection
 - ✅ Whitespace and edge case handling
-- Caching for performance optimization (planned)
+- ✅ In-memory caching with TTL and manual invalidation
+- ✅ Lazy loading for optimal performance
 
 ### Calculators Layer (`src/calculators/`)
 
