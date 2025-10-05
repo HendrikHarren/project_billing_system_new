@@ -70,8 +70,12 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
 │  │  Generate   │  │  Validate   │  │       List              │ │
 │  │   Report    │  │    Data     │  │   Timesheets            │ │
-│  │            │  │             │  │                         │ │
+│  │  (Command)  │  │  (Command)  │  │     (Command)           │ │
 │  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+│  ┌─────────────┐  ┌─────────────┐                              │
+│  │  Progress   │  │  Formatters │                              │
+│  │   Utils     │  │   (Colors)  │                              │
+│  └─────────────┘  └─────────────┘                              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -302,6 +306,50 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
 - ✅ Large dataset output handling (9000+ rows tested)
 - ✅ Configurable pivot table filters (project, year, month)
 - ✅ Complete 4-sheet master timesheet generation
+
+### CLI Layer (`src/cli/`)
+
+**Purpose**: User-friendly command-line interface for system interaction
+
+**Components**:
+- `__init__.py`: ✅ Main CLI entry point with Click framework
+  - Command group with version flag
+  - Three registered commands
+  - Entry point for `python -m src.cli`
+- `commands/generate.py`: ✅ Full end-to-end report generation
+  - Orchestrates entire pipeline (read → aggregate → generate → write)
+  - Month-based filtering (YYYY-MM format validation)
+  - Optional project and freelancer filters
+  - Progress tracking through 5 stages
+  - Summary output with file URL and duration
+- `commands/list.py`: ✅ List available timesheets
+  - Fetches files from Google Drive folder
+  - Extracts freelancer names from filenames
+  - Formatted table output with file IDs and modified times
+  - Support for custom folder ID override
+- `commands/validate.py`: ✅ Data quality validation
+  - File-level or month-level validation scope
+  - Uses existing TimesheetValidator
+  - Severity filtering (error/warning/info)
+  - Detailed validation report with issue counts
+  - Non-zero exit code on errors (for CI integration)
+- `utils/formatters.py`: ✅ Output formatting utilities
+  - Color-coded messages (success=green, error=red, warning=yellow, info=blue)
+  - Table formatting with automatic column width
+  - Consistent styling across all commands
+- `utils/progress.py`: ✅ Progress tracking utilities
+  - ProgressTracker for multi-stage workflows
+  - Click progressbar integration
+  - Stage-based progress indicators (e.g., "[2/5] Aggregating data...")
+
+**Key Features**:
+- ✅ Click-based CLI framework with rich help text
+- ✅ Three main commands: generate-report, list-timesheets, validate-data
+- ✅ Color-coded output for enhanced readability
+- ✅ Progress indicators for long-running operations
+- ✅ Comprehensive error handling with stack traces
+- ✅ Integration with all existing system components
+- ✅ 86% test coverage with 35 unit tests
 
 ## Data Flow
 

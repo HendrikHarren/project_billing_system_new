@@ -52,8 +52,26 @@ python test_connection.py
 # Run tests
 pytest
 
-# Generate monthly report (planned)
-python -m src.cli generate-report --month 2023-06
+#CLI Commands
+
+# Generate monthly billing report
+python -m src.cli generate-report --month 2024-10
+
+# Generate report with filters
+python -m src.cli generate-report --month 2024-10 --project PROJ001
+python -m src.cli generate-report --month 2024-10 --freelancer "John Doe"
+
+# List available timesheets
+python -m src.cli list-timesheets
+
+# Validate timesheet data quality
+python -m src.cli validate-data
+python -m src.cli validate-data --month 2024-10
+python -m src.cli validate-data --file-id abc123xyz --severity warning
+
+# Get help for any command
+python -m src.cli --help
+python -m src.cli generate-report --help
 ```
 
 ## 🏗️ Architecture
@@ -152,10 +170,14 @@ The project enforces high code quality standards:
 - ✅ Master timesheet generation with 4 output sheets:
   - Timesheet_master & Trips_master: Static data with formatting
   - Pivot_master & Weekly_reporting: Native Google Sheets pivot tables
+- ✅ CLI interface with 3 commands:
+  - `generate-report`: Full end-to-end report generation
+  - `list-timesheets`: List available timesheets from Google Drive
+  - `validate-data`: Validate data quality with detailed reporting
 
 ### Planned Features (Development Roadmap)
-- 🚧 CLI interface for report generation
 - 🚧 Automated scheduling and monitoring
+- 🚧 Error handling & logging enhancements
 
 ## 📈 Project Status
 
@@ -179,12 +201,17 @@ The project enforces high code quality standards:
 - [x] Trip reimbursement calculator (Issue #11)
 - [x] Weekly hours calculator (Issue #12)
 
-**Phase 5: Report Generation** 🚧 In Progress
+**Phase 5: Report Generation** ✅ Complete
 - [x] Master timesheet generator (Issue #13)
-- [ ] Pivot table builder (Issue #14)
-- [ ] Google Sheets writer (Issue #15)
+- [x] Pivot table builder (Issue #14)
+- [x] Google Sheets writer (Issue #15)
 
-**Phase 6-7**: See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for complete roadmap
+**Phase 6: CLI Application** 🚧 In Progress
+- [x] CLI Interface (Issue #16)
+- [ ] Report Automation (Issue #17)
+- [ ] Error Handling & Logging (Issue #18)
+
+**Phase 7**: See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for complete roadmap
 
 ## 🤝 Contributing
 
