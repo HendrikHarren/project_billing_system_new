@@ -54,6 +54,14 @@ class BillingSystemConfig(BaseSettings):
     max_retries: int = Field(default=3, alias="MAX_RETRIES")
     retry_delay: float = Field(default=1.0, alias="RETRY_DELAY")
 
+    # Cache Configuration
+    enable_sheets_cache: bool = Field(default=True, alias="ENABLE_SHEETS_CACHE")
+    cache_file_path: str = Field(
+        default=".cache/sheets_cache.json", alias="CACHE_FILE_PATH"
+    )
+    cache_max_size: int = Field(default=100, alias="CACHE_MAX_SIZE")
+    cache_auto_save: bool = Field(default=True, alias="CACHE_AUTO_SAVE")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

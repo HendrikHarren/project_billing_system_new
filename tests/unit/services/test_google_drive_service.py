@@ -473,3 +473,141 @@ class TestGoogleDriveServiceCaching:
         assert result1 == result2
         # API should only be called once due to caching
         assert mock_drive_client.files().list().execute.call_count == 1
+
+
+class TestGetModificationTime:
+    """Test get_modification_time method for cache invalidation."""
+
+    @pytest.fixture
+    def mock_drive_client(self):
+        """Mock Google Drive API client."""
+        mock_client = Mock()
+        mock_files = Mock()
+        mock_client.files.return_value = mock_files
+        return mock_client
+
+    @pytest.fixture
+    def mock_retry_handler(self):
+        """Mock retry handler."""
+        mock_handler = Mock(spec=RetryHandler)
+        mock_handler.execute_with_retry.side_effect = (
+            lambda func, *args, **kwargs: func(*args, **kwargs)
+        )
+        return mock_handler
+
+    @pytest.fixture
+    def drive_service(self, mock_drive_client, mock_retry_handler):
+        """GoogleDriveService instance with mocked dependencies."""
+        build_patcher = patch("src.services.google_drive_service.build")
+        auth_patcher = patch("google.auth.default")
+
+        mock_build = build_patcher.start()
+        mock_auth = auth_patcher.start()
+
+        mock_build.return_value = mock_drive_client
+        mock_auth.return_value = (Mock(), "test-project")
+
+        service = GoogleDriveService(retry_handler=mock_retry_handler)
+
+        yield service
+
+        build_patcher.stop()
+        auth_patcher.stop()
+
+    def test_get_modification_time_success(self, drive_service, mock_drive_client):
+        """Test getting modification time from file metadata."""
+        from datetime import datetime
+
+        mock_response = {
+            "id": "file123",
+            "name": "Test_File.xlsx",
+            "modifiedTime": "2025-10-05T10:00:00.000Z",
+        }
+        mock_drive_client.files().get().execute.return_value = mock_response
+
+        mod_time = drive_service.get_modification_time("file123")
+
+        assert isinstance(mod_time, datetime)
+        assert mod_time.year == 2025
+        assert mod_time.month == 10
+        assert mod_time.day == 5
+        assert mod_time.hour == 10
+        assert mod_time.minute == 0
+
+    def test_get_modification_time_rfc3339_parsing(
+        self, drive_service, mock_drive_client
+    ):
+        """Test parsing of RFC 3339 timestamp format."""
+        from datetime import datetime
+
+        # Test various RFC 3339 formats
+        test_cases = [
+            ("2025-10-05T10:00:00.000Z", datetime(2025, 10, 5, 10, 0, 0)),
+            ("2025-12-31T23:59:59.999Z", datetime(2025, 12, 31, 23, 59, 59, 999000)),
+        ]
+
+        for timestamp_str, expected_dt in test_cases:
+            mock_response = {
+                "id": "file123",
+                "name": "Test_File.xlsx",
+                "modifiedTime": timestamp_str,
+            }
+            mock_drive_client.files().get().execute.return_value = mock_response
+
+            # Clear cache to force new read
+            drive_service._metadata_cache.clear()
+
+            mod_time = drive_service.get_modification_time("file123")
+
+            # Compare up to seconds (ignore microseconds for simpler comparison)
+            assert mod_time.year == expected_dt.year
+            assert mod_time.month == expected_dt.month
+            assert mod_time.day == expected_dt.day
+            assert mod_time.hour == expected_dt.hour
+            assert mod_time.minute == expected_dt.minute
+            assert mod_time.second == expected_dt.second
+
+    def test_get_modification_time_missing_field(
+        self, drive_service, mock_drive_client
+    ):
+        """Test error handling when modifiedTime field is missing."""
+        mock_response = {
+            "id": "file123",
+            "name": "Test_File.xlsx",
+            # modifiedTime missing
+        }
+        mock_drive_client.files().get().execute.return_value = mock_response
+
+        with pytest.raises(ValueError, match="No modification time available"):
+            drive_service.get_modification_time("file123")
+
+    def test_get_modification_time_invalid_format(
+        self, drive_service, mock_drive_client
+    ):
+        """Test error handling for invalid timestamp format."""
+        mock_response = {
+            "id": "file123",
+            "name": "Test_File.xlsx",
+            "modifiedTime": "invalid-timestamp",
+        }
+        mock_drive_client.files().get().execute.return_value = mock_response
+
+        with pytest.raises(ValueError):
+            drive_service.get_modification_time("file123")
+
+    def test_get_modification_time_uses_cache(self, drive_service, mock_drive_client):
+        """Test that get_modification_time uses metadata cache."""
+        mock_response = {
+            "id": "file123",
+            "name": "Test_File.xlsx",
+            "modifiedTime": "2025-10-05T10:00:00.000Z",
+        }
+        mock_drive_client.files().get().execute.return_value = mock_response
+
+        # First call
+        drive_service.get_modification_time("file123")
+        # Second call should use cache
+        drive_service.get_modification_time("file123")
+
+        # API should only be called once due to caching
+        assert mock_drive_client.files().get().execute.call_count == 1
