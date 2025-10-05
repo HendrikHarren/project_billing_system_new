@@ -125,8 +125,8 @@ class WeeklyHoursCalculator:
         result: List[WeeklyHoursData] = []
 
         for (freelancer_name, year, week_number), entries in weekly_groups.items():
-            total_billable = sum(e[1] for e in entries)
-            total_work = sum(e[2] for e in entries)
+            total_billable = sum((e[1] for e in entries), Decimal("0"))
+            total_work = sum((e[2] for e in entries), Decimal("0"))
             count = sum(e[0] for e in entries)
 
             weekly_data = WeeklyHoursData(
