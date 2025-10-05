@@ -7,7 +7,7 @@ based on duration tiers, filter by various criteria, and generate summary statis
 import logging
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.models.trip import Trip, TripReimbursement
 
@@ -341,7 +341,7 @@ class TripAggregator:
 
     def _find_matching_term(
         self, duration_days: int, trip_terms: List[Dict[str, Any]]
-    ) -> Dict[str, Any] | None:
+    ) -> Optional[Dict[str, Any]]:
         """Find matching trip term tier for a given duration.
 
         Args:
