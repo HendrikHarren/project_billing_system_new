@@ -333,19 +333,20 @@ class GoogleSheetsWriter:
                                         },
                                         {
                                             "summarizeFunction": "SUM",
-                                            "name": "Travel billed",
+                                            "name": "Travel surcharge billed",
                                             "sourceColumnOffset": 19,
                                         },
                                         {
                                             "summarizeFunction": "SUM",
-                                            "name": "Travel cost",
+                                            "name": "Travel surcharge cost",
                                             "sourceColumnOffset": 20,
                                         },
                                         {
                                             "summarizeFunction": "SUM",
                                             "name": "Total billed",
                                             "formula": (
-                                                "='Hours billed'+'Travel billed'"
+                                                "='Hours billed'"
+                                                "+'Travel surcharge billed'"
                                             ),
                                         },
                                         {
@@ -353,7 +354,8 @@ class GoogleSheetsWriter:
                                             "name": "Agency Profit",
                                             "formula": (
                                                 "='Hours billed'-'Hours cost'"
-                                                "+'Travel billed'-'Travel cost'"
+                                                "+'Travel surcharge billed'"
+                                                "-'Travel surcharge cost'"
                                             ),
                                         },
                                     ],
