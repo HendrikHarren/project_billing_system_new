@@ -7,7 +7,7 @@ flexible filtering.
 
 import datetime as dt
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 from src.calculators.billing_calculator import BillingResult, calculate_billing_batch
@@ -16,9 +16,29 @@ from src.models.timesheet import TimesheetEntry
 from src.models.trip import Trip
 from src.readers.project_terms_reader import ProjectTermsReader
 from src.readers.timesheet_reader import TimesheetReader
+from src.services.error_classifier import ErrorClassifier
 from src.services.google_drive_service import GoogleDriveService
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class FileReadError:
+    """Information about a failed file read operation.
+
+    Attributes:
+        file_id: Google Drive file ID
+        file_name: Name of the file
+        error_type: Type of error (retryable/fatal/unknown)
+        error_message: Detailed error message
+        retry_count: Number of retries attempted
+    """
+
+    file_id: str
+    file_name: str
+    error_type: str
+    error_message: str
+    retry_count: int = 0
 
 
 @dataclass
@@ -29,17 +49,24 @@ class AggregatedTimesheetData:
     - All timesheet entries from multiple freelancers
     - Calculated billing results for each entry
     - Identified trips (consecutive on-site days)
+    - Error information for failed file reads
 
     Attributes:
         entries: List of all timesheet entries
         billing_results: List of billing calculations for each entry
         trips: List of identified trips from on-site work
+        errors: List of file read errors (default: empty list)
+        files_processed: Total number of files attempted (default: 0)
+        files_failed: Number of files that failed to read (default: 0)
 
     Example:
         >>> data = AggregatedTimesheetData(
         ...     entries=[entry1, entry2],
         ...     billing_results=[result1, result2],
-        ...     trips=[trip1]
+        ...     trips=[trip1],
+        ...     errors=[],
+        ...     files_processed=2,
+        ...     files_failed=0
         ... )
         >>> len(data.entries)
         2
@@ -48,6 +75,9 @@ class AggregatedTimesheetData:
     entries: List[TimesheetEntry]
     billing_results: List[BillingResult]
     trips: List[Trip]
+    errors: List[FileReadError] = field(default_factory=list)
+    files_processed: int = 0
+    files_failed: int = 0
 
 
 class TimesheetAggregator:
@@ -198,8 +228,12 @@ class TimesheetAggregator:
             logger.info("No timesheet files found in folder")
             return AggregatedTimesheetData(entries=[], billing_results=[], trips=[])
 
-        # Step 2: Read all timesheets
+        # Step 2: Read all timesheets with error tracking
         all_entries: List[TimesheetEntry] = []
+        errors: List[FileReadError] = []
+        files_processed = len(files)
+        files_failed = 0
+        error_classifier = ErrorClassifier()
 
         for file_info in files:
             file_id = file_info["id"]
@@ -211,18 +245,54 @@ class TimesheetAggregator:
                 all_entries.extend(entries)
                 logger.info(f"Read {len(entries)} entries from {file_name}")
             except Exception as e:
-                logger.warning(
-                    f"Failed to read timesheet {file_name} (ID: {file_id}): {e}. "
-                    f"Skipping this file."
+                # Classify the error
+                error_type = error_classifier.classify(e)
+                error_desc = error_classifier.get_error_description(e)
+
+                # Track the error
+                file_error = FileReadError(
+                    file_id=file_id,
+                    file_name=file_name,
+                    error_type=error_classifier.get_error_type_name(error_type),
+                    error_message=str(e),
+                    retry_count=0,  # RetryHandler already exhausted retries
                 )
+                errors.append(file_error)
+                files_failed += 1
+
+                # Log appropriately based on error type
+                if error_classifier.is_retryable(e):
+                    logger.error(
+                        f"Failed to read timesheet {file_name} (ID: {file_id}) "
+                        f"after retries: {error_desc}. "
+                        f"This is a retryable error but all retry attempts were "
+                        f"exhausted. Skipping file."
+                    )
+                else:
+                    logger.warning(
+                        f"Failed to read timesheet {file_name} (ID: {file_id}): "
+                        f"{error_desc}. "
+                        f"This is a non-retryable error. Skipping file."
+                    )
                 continue
 
-        logger.info(f"Successfully read {len(all_entries)} total timesheet entries")
+        logger.info(
+            f"Successfully read {len(all_entries)} total timesheet entries from "
+            f"{files_processed - files_failed}/{files_processed} files. "
+            f"Failed files: {files_failed}"
+        )
 
-        # Return empty data if no entries found
+        # Return empty data if no entries found (but include error information)
         if not all_entries:
             logger.info("No timesheet entries found")
-            return AggregatedTimesheetData(entries=[], billing_results=[], trips=[])
+            return AggregatedTimesheetData(
+                entries=[],
+                billing_results=[],
+                trips=[],
+                errors=errors,
+                files_processed=files_processed,
+                files_failed=files_failed,
+            )
 
         # Step 3: Apply filters to entries (before calculating billing)
         filtered_entries = all_entries
@@ -293,14 +363,21 @@ class TimesheetAggregator:
             logger.error(f"Failed to calculate trips: {e}")
             raise
 
-        # Step 7: Return aggregated data
+        # Step 7: Return aggregated data with error information
         result = AggregatedTimesheetData(
-            entries=filtered_entries, billing_results=billing_results, trips=trips
+            entries=filtered_entries,
+            billing_results=billing_results,
+            trips=trips,
+            errors=errors,
+            files_processed=files_processed,
+            files_failed=files_failed,
         )
 
         logger.info(
             f"Aggregation complete: {len(result.entries)} entries, "
-            f"{len(result.billing_results)} billing results, {len(result.trips)} trips"
+            f"{len(result.billing_results)} billing results, "
+            f"{len(result.trips)} trips, "
+            f"{len(result.errors)} errors ({files_failed}/{files_processed} failed)"
         )
 
         return result

@@ -6,6 +6,7 @@ sources and combine with billing calculations.
 
 from src.aggregators.timesheet_aggregator import (
     AggregatedTimesheetData,
+    FileReadError,
     TimesheetAggregator,
 )
 from src.aggregators.trip_aggregator import AggregatedTripData, TripAggregator
@@ -16,6 +17,7 @@ from src.aggregators.weekly_hours_calculator import (
 
 __all__ = [
     "AggregatedTimesheetData",
+    "FileReadError",
     "TimesheetAggregator",
     "AggregatedTripData",
     "TripAggregator",

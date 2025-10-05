@@ -34,9 +34,9 @@ class TestRetryHandler:
         """Test retry handler initializes with default values."""
         handler = RetryHandler()
 
-        assert handler.max_retries == 3
+        assert handler.max_retries == 5  # Updated from 3 to 5
         assert handler.base_delay == 1.0
-        assert handler.max_delay == 60.0
+        assert handler.max_delay == 120.0  # Updated from 60.0 to 120.0
         assert handler.exponential_base == 2
         assert handler.jitter_factor == 0.1
         assert handler.circuit_breaker_threshold == 10
@@ -477,3 +477,113 @@ class TestRetryHandlerErrorScenarios:
 
         assert result == "success"
         assert mock_func.call_count == 2
+
+    def test_retry_after_header_parsing(self):
+        """Test Retry-After header parsing for 429 errors."""
+        # Create handler with higher max_delay to test Retry-After parsing
+        handler = RetryHandler(max_retries=3, base_delay=0.1, max_delay=10.0)
+
+        mock_func = Mock()
+        # Create 429 error with Retry-After header
+        rate_limit_error = HttpError(
+            resp=Mock(status=429, headers={"Retry-After": "5"}),
+            content=b'{"error": {"code": 429, "message": "Rate limit exceeded"}}',
+        )
+
+        mock_func.side_effect = [rate_limit_error, "success"]
+
+        delays = []
+        with patch("time.sleep") as mock_sleep:
+            mock_sleep.side_effect = lambda delay: delays.append(delay)
+            result = handler.execute_with_retry(mock_func)
+
+        assert result == "success"
+        assert mock_func.call_count == 2
+        # Should respect Retry-After header (5 seconds)
+        assert len(delays) == 1
+        # Allow for jitter
+        assert 4.5 <= delays[0] <= 5.5
+
+    def test_retry_after_header_date_format(self):
+        """Test Retry-After header with HTTP date format."""
+        import time
+        from email.utils import formatdate
+
+        # Create handler with higher max_delay
+        handler = RetryHandler(max_retries=3, base_delay=0.1, max_delay=10.0)
+
+        mock_func = Mock()
+        # Retry-After can be HTTP-date format
+        retry_time = time.time() + 3
+        date_header = formatdate(timeval=retry_time, usegmt=True)
+
+        rate_limit_error = HttpError(
+            resp=Mock(status=429, headers={"Retry-After": date_header}),
+            content=b'{"error": {"code": 429, "message": "Rate limit exceeded"}}',
+        )
+
+        mock_func.side_effect = [rate_limit_error, "success"]
+
+        delays = []
+        with patch("time.sleep") as mock_sleep:
+            mock_sleep.side_effect = lambda delay: delays.append(delay)
+            result = handler.execute_with_retry(mock_func)
+
+        assert result == "success"
+        assert mock_func.call_count == 2
+        # Should wait approximately 3 seconds
+        assert len(delays) == 1
+        assert 2.5 <= delays[0] <= 3.5
+
+    def test_increased_max_retries_default(self):
+        """Test that default max retries is increased to 5."""
+        handler = RetryHandler()
+        assert handler.max_retries == 5  # Updated from 3 to 5
+
+    def test_increased_max_delay_default(self):
+        """Test that default max delay is increased to 120s."""
+        handler = RetryHandler()
+        assert handler.max_delay == 120.0  # Updated from 60.0 to 120.0
+
+    def test_retry_after_header_with_max_delay_cap(self, retry_handler):
+        """Test Retry-After header respects max_delay cap."""
+        mock_func = Mock()
+        # Retry-After suggests 300 seconds (5 minutes)
+        rate_limit_error = HttpError(
+            resp=Mock(status=429, headers={"Retry-After": "300"}),
+            content=b'{"error": {"code": 429, "message": "Rate limit exceeded"}}',
+        )
+
+        mock_func.side_effect = [rate_limit_error, "success"]
+
+        delays = []
+        with patch("time.sleep") as mock_sleep:
+            mock_sleep.side_effect = lambda delay: delays.append(delay)
+            result = retry_handler.execute_with_retry(mock_func)
+
+        assert result == "success"
+        # Should be capped at max_delay (1.0 for test fixture)
+        assert len(delays) == 1
+        assert delays[0] <= 1.1  # max_delay + jitter
+
+    def test_retry_after_header_missing(self, retry_handler):
+        """Test 429 error without Retry-After header uses exponential backoff."""
+        mock_func = Mock()
+        # Create 429 error without Retry-After header
+        rate_limit_error = HttpError(
+            resp=Mock(status=429),
+            content=b'{"error": {"code": 429, "message": "Rate limit exceeded"}}',
+        )
+
+        mock_func.side_effect = [rate_limit_error, "success"]
+
+        delays = []
+        with patch("time.sleep") as mock_sleep:
+            mock_sleep.side_effect = lambda delay: delays.append(delay)
+            result = retry_handler.execute_with_retry(mock_func)
+
+        assert result == "success"
+        assert mock_func.call_count == 2
+        # Should use exponential backoff (base_delay = 0.1)
+        assert len(delays) == 1
+        assert 0.09 <= delays[0] <= 0.11  # base_delay with jitter
