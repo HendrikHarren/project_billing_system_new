@@ -67,7 +67,10 @@ class TestGoogleSheetsService:
                 assert service is not None
 
                 mock_auth.assert_called_once_with(
-                    scopes=["https://www.googleapis.com/auth/spreadsheets"]
+                    scopes=[
+                        "https://www.googleapis.com/auth/spreadsheets",
+                        "https://www.googleapis.com/auth/drive",
+                    ]
                 )
                 mock_build.assert_called_once_with(
                     "sheets", "v4", credentials=mock_credentials
