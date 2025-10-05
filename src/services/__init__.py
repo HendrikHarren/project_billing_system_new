@@ -9,6 +9,7 @@ This package provides modern, resilient Google API services with:
 - Pandas DataFrame integration
 """
 
+from .error_classifier import ErrorClassifier, ErrorType
 from .google_drive_service import GoogleDriveService
 from .google_sheets_service import GoogleSheetsService
 from .retry_handler import CircuitBreakerError, RetryExhaustedException, RetryHandler
@@ -21,4 +22,6 @@ __all__ = [
     "GoogleSheetsService",
     "GoogleDriveService",
     "SheetsCacheService",
+    "ErrorClassifier",
+    "ErrorType",
 ]

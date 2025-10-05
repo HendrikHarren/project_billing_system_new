@@ -7,6 +7,7 @@ import secrets
 import socket
 import threading
 import time
+from email.utils import parsedate_to_datetime
 from typing import Any, Callable, Optional
 
 import requests.exceptions
@@ -41,9 +42,9 @@ class RetryHandler:
 
     def __init__(
         self,
-        max_retries: int = 3,
+        max_retries: int = 5,
         base_delay: float = 1.0,
-        max_delay: float = 60.0,
+        max_delay: float = 120.0,
         exponential_base: float = 2,
         jitter_factor: float = 0.1,
         circuit_breaker_threshold: int = 10,
@@ -106,16 +107,80 @@ class RetryHandler:
 
         return False
 
-    def _calculate_delay(self, attempt: int) -> float:
+    def _parse_retry_after(self, exception: Exception) -> Optional[float]:
+        """
+        Parse Retry-After header from HTTP 429 errors.
+
+        Args:
+            exception: The exception to parse
+
+        Returns:
+            Delay in seconds, or None if no Retry-After header
+        """
+        if not isinstance(exception, HttpError):
+            return None
+
+        if exception.resp.status != 429:
+            return None
+
+        # Get Retry-After header from response headers
+        retry_after = (
+            exception.resp.headers.get("Retry-After")
+            if hasattr(exception.resp, "headers")
+            else None
+        )
+
+        if not retry_after:
+            return None
+
+        try:
+            # Try parsing as integer (seconds)
+            return float(retry_after)
+        except (ValueError, TypeError):
+            pass
+
+        try:
+            # Try parsing as HTTP date
+            retry_datetime = parsedate_to_datetime(retry_after)
+            delay = (
+                retry_datetime
+                - parsedate_to_datetime(
+                    time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
+                )
+            ).total_seconds()
+            return max(0, delay)
+        except (ValueError, TypeError):
+            logger.warning(f"Failed to parse Retry-After header: {retry_after}")
+            return None
+
+    def _calculate_delay(
+        self, attempt: int, exception: Optional[Exception] = None
+    ) -> float:
         """
         Calculate delay for exponential backoff with jitter.
 
+        For 429 errors, respects Retry-After header if present.
+
         Args:
             attempt: Current attempt number (0-based)
+            exception: The exception that triggered the retry (for Retry-After parsing)
 
         Returns:
             Delay in seconds
         """
+        # Check for Retry-After header in 429 errors
+        if exception:
+            retry_after_delay = self._parse_retry_after(exception)
+            if retry_after_delay is not None:
+                # Respect Retry-After but cap at max_delay
+                delay = min(retry_after_delay, self.max_delay)
+                # Add small jitter to Retry-After delays
+                random_gen = secrets.SystemRandom()
+                jitter = (
+                    random_gen.uniform(-self.jitter_factor, self.jitter_factor) * delay
+                )
+                return max(0, delay + jitter)
+
         # Calculate exponential delay
         delay = self.base_delay * (self.exponential_base**attempt)
 
@@ -242,7 +307,7 @@ class RetryHandler:
                     )
 
                 # Calculate delay and wait
-                delay = self._calculate_delay(attempt)
+                delay = self._calculate_delay(attempt, exception=e)
                 func_name = getattr(func, "__name__", repr(func))
                 logger.debug(
                     f"Retrying {func_name} in {delay:.2f}s "
