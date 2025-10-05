@@ -5,9 +5,9 @@ This script uses REAL data to show what the current implementation produces.
 
 from datetime import datetime
 
+from demo_master_timesheet import generate_timesheet_master_dataframe
 from dotenv import load_dotenv
 
-from demo_master_timesheet import generate_timesheet_master_dataframe
 from src.google_auth import get_drive_service, get_sheets_service
 
 

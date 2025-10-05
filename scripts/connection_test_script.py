@@ -34,7 +34,8 @@ def test_drive_connection():
 
         for file in files:
             print(
-                f"  - {file['name']} (ID: {file['id']}, Modified: {file['modifiedTime']})"
+                f"  - {file['name']} (ID: {file['id']}, "
+                f"Modified: {file['modifiedTime']})"
             )
 
         return files
