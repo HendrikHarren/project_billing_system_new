@@ -450,7 +450,8 @@ class SheetsCacheService:
                 # Clean up temp file on error
                 try:
                     os.unlink(temp_path)
-                except Exception:
+                except (OSError, FileNotFoundError):
+                    # Temp file may already be deleted, ignore
                     pass
                 raise e
 
