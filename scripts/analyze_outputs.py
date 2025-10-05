@@ -39,7 +39,8 @@ def analyze_monthly_invoicing_folder():
 
         for file in files:
             print(
-                f"  - {file['name']} (ID: {file['id']}, Modified: {file['modifiedTime']}, Type: {file['mimeType']})"
+                f"  - {file['name']} (ID: {file['id']}, "
+                f"Modified: {file['modifiedTime']}, Type: {file['mimeType']})"
             )
             if file["mimeType"] == "application/vnd.google-apps.spreadsheet":
                 spreadsheets.append(file)
@@ -47,7 +48,8 @@ def analyze_monthly_invoicing_folder():
                 other_files.append(file)
 
         print(
-            f"\nFound {len(spreadsheets)} spreadsheets and {len(other_files)} other files"
+            f"\nFound {len(spreadsheets)} spreadsheets and "
+            f"{len(other_files)} other files"
         )
         return spreadsheets
 
@@ -129,7 +131,7 @@ def find_and_analyze_latest_outputs():
 
     # Analyze the most recent 2 files
     if master_files:
-        print(f"\n=== Analyzing Latest Master Timesheet Files ===")
+        print("\n=== Analyzing Latest Master Timesheet Files ===")
         for i, file in enumerate(master_files[:2]):  # Analyze top 2 most recent
             analyze_master_timesheet(file["id"], file["name"])
             if i < len(master_files) - 1:
