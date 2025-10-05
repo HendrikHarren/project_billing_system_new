@@ -38,9 +38,10 @@ def list_timesheets(folder_id: Optional[str]):
     try:
         click.echo(format_info("Fetching timesheets from Google Drive..."))
 
-        # Initialize services
+        # Initialize services with credentials from config
         settings = get_config()
-        drive_service = GoogleDriveService()
+        credentials = settings.get_google_service_account_info()
+        drive_service = GoogleDriveService(credentials=credentials)
 
         # Get folder ID from config if not provided
         target_folder_id = folder_id or settings.timesheet_folder_id
