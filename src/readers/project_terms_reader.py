@@ -88,7 +88,7 @@ class ProjectTermsReader:
         self._cache_timestamp: Optional[datetime] = None
 
     def get_all_project_terms(
-        self, sheet_name: str = "Project Terms"
+        self, sheet_name: str = "Main terms"
     ) -> Dict[Tuple[str, str], ProjectTerms]:
         """Get all project terms from the sheet.
 
@@ -194,7 +194,7 @@ class ProjectTermsReader:
         age = datetime.now() - self._cache_timestamp
         return age < timedelta(seconds=self.cache_ttl)
 
-    def _read_main_terms_sheet(self, sheet_name: str = "Project Terms"):
+    def _read_main_terms_sheet(self, sheet_name: str = "Main terms"):
         """Read and parse main project terms from the sheet.
 
         Args:
