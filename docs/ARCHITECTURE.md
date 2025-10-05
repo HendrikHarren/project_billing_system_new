@@ -276,14 +276,32 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
 **Purpose**: Output generation with proper formatting
 
 **Components**:
-- `master_timesheet_generator.py`: Generate formatted master timesheet
-- `pivot_builder.py`: Create pivot table data structures
-- `sheets_writer.py`: Write formatted output to Google Sheets
+- `master_timesheet_generator.py`: ✅ Generate formatted master timesheet DataFrame
+  - Transforms AggregatedTimesheetData into 24-column master timesheet
+  - Generates Trips_master sheet (7 columns)
+  - Formats dates (YYYY-MM-DD), times (HH:MM), and numeric data
+  - Handles trip lookups and duration calculations
+  - ISO calendar week numbering with year boundary support
+  - 100% test coverage (planned)
+- `google_sheets_writer.py`: ✅ Write formatted output to Google Sheets with native pivot tables
+  - Creates spreadsheet with 4 sheets:
+    - Timesheet_master: Static data (24 columns) with professional formatting
+    - Trips_master: Static data (7 columns) with professional formatting
+    - Pivot_master: **Native Google Sheets pivot table** for financial summary
+    - Weekly_reporting: **Native Google Sheets pivot table** for weekly hours matrix
+  - Uses Google Sheets API `updateCells` with `pivotTable` configuration
+  - Supports filtering by project, year, and month
+  - Applies professional formatting (bold headers, frozen rows/columns, auto-resize)
+  - Moves files to designated output folder
+  - Returns file ID and shareable URL
+  - 100% test coverage (planned)
 
 **Key Features**:
-- Professional formatting and styling
-- Pivot table generation
-- Large dataset output handling
+- ✅ Professional formatting and styling (headers, freeze, auto-resize)
+- ✅ **Native Google Sheets pivot tables** (interactive, filterable, dynamic)
+- ✅ Large dataset output handling (9000+ rows tested)
+- ✅ Configurable pivot table filters (project, year, month)
+- ✅ Complete 4-sheet master timesheet generation
 
 ## Data Flow
 
@@ -335,25 +353,33 @@ Folder              (Read + Merge +          (Unified Dataset:
                    (Extract Trips)      (Reimbursements)
                           │
                           ▼
-                   Weekly Calculator ──► Weekly Matrix (planned)
+                   Weekly Calculator ──► Weekly Matrix ✅
                    (Hours by Week)       (52 weeks × N freelancers)
 ```
 
-### 4. Output Generation Phase
+### 4. Output Generation Phase ✅
 
 ```
-Master Dataset ──► Master Generator ──► Formatted Timesheet
-                   (24 columns)           (All Details)
-                          │
-                          ▼
-                   Pivot Builder ──► Summary Views
-                   (Filters &         (Project/Period
-                    Calculations)      Summaries)
-                          │
-                          ▼
-                   Sheets Writer ──► Google Sheets
-                   (4 Sheets +        (Published
-                    Formatting)        Report)
+AggregatedTimesheetData ──► Master Generator ──► MasterTimesheetData
+(From Aggregator)            (24 columns +         (timesheet_master +
+                              7 columns)            trips_master DataFrames)
+                                    │
+                                    ▼
+MasterTimesheetData ──► GoogleSheetsWriter ──► Google Sheets File
+(Static DataFrames +     (Write static data +      (Published Report:
+ Filter params)          Create native pivots)      - Timesheet_master (static)
+                                                     - Trips_master (static)
+                                                     - Pivot_master (native pivot)
+                                                     - Weekly_reporting (native pivot))
+                                    │
+                                    ▼
+                         Native Google Sheets Pivot Tables
+                         - Pivot_master: Rows by Name/Date/Location
+                                        Values: Hours, Rate, Billing metrics
+                                        Filters: Project, Year, Month
+                         - Weekly_reporting: Rows by Name, Columns by Week
+                                            Values: Sum of Hours
+                                            Filters: Project, Year
 ```
 
 ## Key Algorithms
