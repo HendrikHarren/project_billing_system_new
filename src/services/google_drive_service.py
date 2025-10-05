@@ -34,6 +34,7 @@ class GoogleDriveService:
         credentials: Optional[Dict[str, Any]] = None,
         retry_handler: Optional[RetryHandler] = None,
         scopes: Optional[List[str]] = None,
+        subject_email: Optional[str] = None,
     ):
         """
         Initialize Google Drive service.
@@ -44,13 +45,13 @@ class GoogleDriveService:
                         If None, falls back to ADC (Application Default Credentials)
             retry_handler: Custom retry handler instance
             scopes: Custom OAuth scopes for authentication
+            subject_email: Email address to impersonate for domain-wide delegation.
+                          Required if service account needs to access user's files.
         """
         self.credentials_info = credentials
         self.retry_handler = retry_handler or RetryHandler()
-        self.scopes = scopes or [
-            "https://www.googleapis.com/auth/drive.readonly",
-            "https://www.googleapis.com/auth/drive.file",
-        ]
+        self.scopes = scopes or ["https://www.googleapis.com/auth/drive"]
+        self.subject_email = subject_email
 
         # Initialize Google Drive API client
         self._service = self._create_service()
@@ -69,14 +70,27 @@ class GoogleDriveService:
         try:
             if self.credentials_info:
                 # Use service account credentials from config
-                credentials = service_account.Credentials.from_service_account_info(
-                    self.credentials_info, scopes=self.scopes
-                )
-                project = self.credentials_info.get("project_id", "unknown")
-                logger.info(
-                    f"Google Drive service initialized with service account "
-                    f"for project: {project}"
-                )
+                if self.subject_email:
+                    # Use domain-wide delegation to impersonate user
+                    credentials = service_account.Credentials.from_service_account_info(
+                        self.credentials_info,
+                        scopes=self.scopes,
+                        subject=self.subject_email,
+                    )
+                    project = self.credentials_info.get("project_id", "unknown")
+                    logger.info(
+                        f"Google Drive service initialized with service account "
+                        f"for project: {project}, impersonating: {self.subject_email}"
+                    )
+                else:
+                    credentials = service_account.Credentials.from_service_account_info(
+                        self.credentials_info, scopes=self.scopes
+                    )
+                    project = self.credentials_info.get("project_id", "unknown")
+                    logger.info(
+                        f"Google Drive service initialized with service account "
+                        f"for project: {project}"
+                    )
             else:
                 # Fall back to Application Default Credentials (ADC)
                 credentials, project = google.auth.default(scopes=self.scopes)

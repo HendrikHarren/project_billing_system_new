@@ -288,8 +288,12 @@ def generate_report(
         click.echo(tracker.get_current_message())
         settings = get_config()
         credentials = settings.get_google_service_account_info()
-        sheets_service = GoogleSheetsService(credentials=credentials)
-        drive_service = GoogleDriveService(credentials=credentials)
+        sheets_service = GoogleSheetsService(
+            credentials=credentials, subject_email=settings.google_subject_email
+        )
+        drive_service = GoogleDriveService(
+            credentials=credentials, subject_email=settings.google_subject_email
+        )
         timesheet_reader = TimesheetReader(sheets_service)
         project_terms_reader = ProjectTermsReader(
             sheets_service, settings.project_terms_file_id

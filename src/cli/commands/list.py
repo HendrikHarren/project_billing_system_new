@@ -41,7 +41,9 @@ def list_timesheets(folder_id: Optional[str]):
         # Initialize services with credentials from config
         settings = get_config()
         credentials = settings.get_google_service_account_info()
-        drive_service = GoogleDriveService(credentials=credentials)
+        drive_service = GoogleDriveService(
+            credentials=credentials, subject_email=settings.google_subject_email
+        )
 
         # Get folder ID from config if not provided
         target_folder_id = folder_id or settings.timesheet_folder_id
