@@ -1,17 +1,16 @@
 """Google Sheets writer for master timesheet output.
 
 This module writes master timesheet data to Google Sheets with proper
-formatting and structure (4 sheets).
+formatting and structure (4 sheets: 2 static + 2 pivot tables).
 """
 
 import logging
 from datetime import datetime
-from typing import Tuple
+from typing import Optional, Tuple
 
 import pandas as pd
 
 from src.writers.master_timesheet_generator import MasterTimesheetData
-from src.writers.pivot_table_generator import PivotTableData
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +19,16 @@ class GoogleSheetsWriter:
     """Write master timesheet data to Google Sheets with formatting.
 
     Creates a Google Sheets file with 4 sheets:
-    1. Timesheet_master - All timesheet entries (24 columns)
-    2. Trips_master - Trip reimbursements (7 columns)
-    3. Pivot_master - Financial summary
-    4. Weekly_reporting - Weekly hours matrix
+    1. Timesheet_master - All timesheet entries (24 columns) [static data]
+    2. Trips_master - Trip reimbursements (7 columns) [static data]
+    3. Pivot_master - Financial summary [native Google Sheets pivot table]
+    4. Weekly_reporting - Weekly hours matrix [native Google Sheets pivot table]
 
     Example:
         >>> writer = GoogleSheetsWriter(sheets_service, drive_service)
         >>> file_id, url = writer.write_master_timesheet(
-        ...     master_data, pivot_data, "folder-id"
+        ...     master_data, "folder-id",
+        ...     project_filter="P&C_NEWRETAIL", year_filter=2023, month_filter=6
         ... )
         >>> print(url)
         https://docs.google.com/spreadsheets/d/...
@@ -47,17 +47,21 @@ class GoogleSheetsWriter:
     def write_master_timesheet(
         self,
         master_data: MasterTimesheetData,
-        pivot_data: PivotTableData,
         output_folder_id: str,
         filename_prefix: str = "Timesheet_Master",
+        project_filter: Optional[str] = None,
+        year_filter: Optional[int] = None,
+        month_filter: Optional[int] = None,
     ) -> Tuple[str, str]:
         """Write complete master timesheet to Google Sheets.
 
         Args:
             master_data: Timesheet and trips DataFrames
-            pivot_data: Pivot table DataFrames
             output_folder_id: Google Drive folder ID for output
             filename_prefix: Prefix for filename (default: "Timesheet_Master")
+            project_filter: Project code filter for pivot tables
+            year_filter: Year filter for pivot tables
+            month_filter: Month filter for pivot tables (only for Pivot_master)
 
         Returns:
             Tuple of (file_id, file_url)
@@ -69,22 +73,23 @@ class GoogleSheetsWriter:
         logger.info(f"Creating master timesheet spreadsheet: {title}")
         file_id = self._create_spreadsheet(title)
 
-        # Write all sheets
+        # Write static sheets
         logger.info("Writing Timesheet_master sheet...")
         self._write_sheet(file_id, "Timesheet_master", master_data.timesheet_master)
 
         logger.info("Writing Trips_master sheet...")
         self._write_sheet(file_id, "Trips_master", master_data.trips_master)
 
-        logger.info("Writing Pivot_master sheet...")
-        self._write_sheet(file_id, "Pivot_master", pivot_data.pivot_master)
+        # Apply basic formatting to static sheets
+        logger.info("Applying formatting to static sheets...")
+        self._apply_static_sheets_formatting(file_id)
 
-        logger.info("Writing Weekly_reporting sheet...")
-        self._write_sheet(file_id, "Weekly_reporting", pivot_data.weekly_reporting)
+        # Create pivot tables
+        logger.info("Creating Pivot_master pivot table...")
+        self._create_pivot_master(file_id, project_filter, year_filter, month_filter)
 
-        # Apply basic formatting
-        logger.info("Applying formatting...")
-        self._apply_basic_formatting(file_id)
+        logger.info("Creating Weekly_reporting pivot table...")
+        self._create_weekly_reporting(file_id, project_filter, year_filter)
 
         # Move to output folder
         logger.info(f"Moving to folder {output_folder_id}...")
@@ -140,8 +145,8 @@ class GoogleSheetsWriter:
             body=body,
         ).execute()
 
-    def _apply_basic_formatting(self, file_id: str):
-        """Apply basic formatting to all sheets.
+    def _apply_static_sheets_formatting(self, file_id: str):
+        """Apply formatting to static sheets (Timesheet_master, Trips_master).
 
         Applies:
         - Header row formatting (bold, gray background, centered)
@@ -153,8 +158,8 @@ class GoogleSheetsWriter:
         """
         requests = []
 
-        # Format all 4 sheets
-        for sheet_id in range(4):
+        # Format sheets 0 and 1 (Timesheet_master, Trips_master)
+        for sheet_id in range(2):
             # Header formatting
             requests.append(
                 {
@@ -213,6 +218,290 @@ class GoogleSheetsWriter:
             )
 
         # Apply all formatting
+        self.sheets_service.spreadsheets().batchUpdate(
+            spreadsheetId=file_id, body={"requests": requests}
+        ).execute()
+
+    def _create_pivot_master(
+        self,
+        file_id: str,
+        project_filter: Optional[str],
+        year_filter: Optional[int],
+        month_filter: Optional[int],
+    ):
+        """Create native Google Sheets pivot table for Pivot_master.
+
+        Args:
+            file_id: Spreadsheet file ID
+            project_filter: Project code filter
+            year_filter: Year filter
+            month_filter: Month filter
+        """
+        source_sheet_id = 0  # Timesheet_master
+        target_sheet_id = 2  # Pivot_master
+
+        # Build criteria filters
+        criteria = {}
+        if project_filter:
+            criteria["2"] = {"visibleValues": [project_filter]}  # Column C (Project)
+        if year_filter:
+            criteria["21"] = {"visibleValues": [str(year_filter)]}  # Column V (Year)
+        if month_filter:
+            criteria["22"] = {"visibleValues": [str(month_filter)]}  # Column W (Month)
+
+        requests = [
+            {
+                "updateCells": {
+                    "rows": {
+                        "values": [
+                            {
+                                "pivotTable": {
+                                    "source": {
+                                        "sheetId": source_sheet_id,
+                                        "startRowIndex": 0,
+                                        "startColumnIndex": 0,
+                                    },
+                                    "rows": [
+                                        {
+                                            "sourceColumnOffset": 0,
+                                            "showTotals": True,
+                                            "sortOrder": "ASCENDING",
+                                        },  # Name
+                                        {
+                                            "sourceColumnOffset": 1,
+                                            "showTotals": True,
+                                            "sortOrder": "ASCENDING",
+                                        },  # Date
+                                        {
+                                            "sourceColumnOffset": 3,
+                                            "showTotals": False,
+                                            "sortOrder": "ASCENDING",
+                                        },  # Location
+                                        {
+                                            "sourceColumnOffset": 4,
+                                            "showTotals": False,
+                                            "sortOrder": "ASCENDING",
+                                        },  # Start Time
+                                        {
+                                            "sourceColumnOffset": 5,
+                                            "showTotals": False,
+                                            "sortOrder": "ASCENDING",
+                                        },  # End Time
+                                        {
+                                            "sourceColumnOffset": 6,
+                                            "showTotals": False,
+                                            "sortOrder": "ASCENDING",
+                                        },  # Topics
+                                        {
+                                            "sourceColumnOffset": 7,
+                                            "showTotals": False,
+                                            "sortOrder": "ASCENDING",
+                                        },  # Break
+                                        {
+                                            "sourceColumnOffset": 8,
+                                            "showTotals": False,
+                                            "sortOrder": "ASCENDING",
+                                        },  # Travel time
+                                    ],
+                                    "columns": [],
+                                    "criteria": criteria,
+                                    "values": [
+                                        {
+                                            "summarizeFunction": "SUM",
+                                            "name": "Hours",
+                                            "sourceColumnOffset": 15,
+                                        },
+                                        {
+                                            "summarizeFunction": "AVERAGE",
+                                            "name": "Rate",
+                                            "sourceColumnOffset": 11,
+                                        },
+                                        {
+                                            "summarizeFunction": "SUM",
+                                            "name": "Hours billed",
+                                            "sourceColumnOffset": 16,
+                                        },
+                                        {
+                                            "summarizeFunction": "SUM",
+                                            "name": "Hours cost",
+                                            "sourceColumnOffset": 17,
+                                        },
+                                        {
+                                            "summarizeFunction": "SUM",
+                                            "name": "Travel hours",
+                                            "sourceColumnOffset": 18,
+                                        },
+                                        {
+                                            "summarizeFunction": "SUM",
+                                            "name": "Travel billed",
+                                            "sourceColumnOffset": 19,
+                                        },
+                                        {
+                                            "summarizeFunction": "SUM",
+                                            "name": "Travel cost",
+                                            "sourceColumnOffset": 20,
+                                        },
+                                        {
+                                            "summarizeFunction": "SUM",
+                                            "name": "Total billed",
+                                            "formula": (
+                                                "='Hours billed'+'Travel billed'"
+                                            ),
+                                        },
+                                        {
+                                            "summarizeFunction": "SUM",
+                                            "name": "Agency Profit",
+                                            "formula": (
+                                                "='Hours billed'-'Hours cost'"
+                                                "+'Travel billed'-'Travel cost'"
+                                            ),
+                                        },
+                                    ],
+                                    "valueLayout": "HORIZONTAL",
+                                }
+                            }
+                        ]
+                    },
+                    "start": {
+                        "sheetId": target_sheet_id,
+                        "rowIndex": 0,
+                        "columnIndex": 0,
+                    },
+                    "fields": "pivotTable",
+                }
+            },
+            {
+                "updateSheetProperties": {
+                    "properties": {
+                        "sheetId": target_sheet_id,
+                        "gridProperties": {"frozenRowCount": 1},
+                    },
+                    "fields": "gridProperties.frozenRowCount",
+                }
+            },
+            {
+                "autoResizeDimensions": {
+                    "dimensions": {
+                        "sheetId": target_sheet_id,
+                        "dimension": "COLUMNS",
+                        "startIndex": 0,
+                    }
+                }
+            },
+            {
+                "updateSheetProperties": {
+                    "properties": {
+                        "sheetId": target_sheet_id,
+                        "gridProperties": {"frozenColumnCount": 1},
+                    },
+                    "fields": "gridProperties.frozenColumnCount",
+                }
+            },
+        ]
+
+        self.sheets_service.spreadsheets().batchUpdate(
+            spreadsheetId=file_id, body={"requests": requests}
+        ).execute()
+
+    def _create_weekly_reporting(
+        self,
+        file_id: str,
+        project_filter: Optional[str],
+        year_filter: Optional[int],
+    ):
+        """Create native Google Sheets pivot table for Weekly_reporting.
+
+        Args:
+            file_id: Spreadsheet file ID
+            project_filter: Project code filter
+            year_filter: Year filter
+        """
+        source_sheet_id = 0  # Timesheet_master
+        target_sheet_id = 3  # Weekly_reporting
+
+        # Build criteria filters
+        criteria = {}
+        if project_filter:
+            criteria["2"] = {"visibleValues": [project_filter]}  # Column C (Project)
+        if year_filter:
+            criteria["21"] = {"visibleValues": [str(year_filter)]}  # Column V (Year)
+
+        requests = [
+            {
+                "updateCells": {
+                    "rows": {
+                        "values": [
+                            {
+                                "pivotTable": {
+                                    "source": {
+                                        "sheetId": source_sheet_id,
+                                        "startRowIndex": 0,
+                                        "startColumnIndex": 0,
+                                    },
+                                    "rows": [
+                                        {
+                                            "sourceColumnOffset": 0,
+                                            "showTotals": False,
+                                            "sortOrder": "ASCENDING",
+                                        }  # Name
+                                    ],
+                                    "columns": [
+                                        {
+                                            "sourceColumnOffset": 23,
+                                            "showTotals": False,
+                                            "sortOrder": "ASCENDING",
+                                        }  # Week
+                                    ],
+                                    "criteria": criteria,
+                                    "values": [
+                                        {
+                                            "summarizeFunction": "SUM",
+                                            "name": "Hours",
+                                            "sourceColumnOffset": 15,
+                                        }
+                                    ],
+                                    "valueLayout": "HORIZONTAL",
+                                }
+                            }
+                        ]
+                    },
+                    "start": {
+                        "sheetId": target_sheet_id,
+                        "rowIndex": 0,
+                        "columnIndex": 0,
+                    },
+                    "fields": "pivotTable",
+                }
+            },
+            {
+                "updateSheetProperties": {
+                    "properties": {
+                        "sheetId": target_sheet_id,
+                        "gridProperties": {"frozenRowCount": 1},
+                    },
+                    "fields": "gridProperties.frozenRowCount",
+                }
+            },
+            {
+                "autoResizeDimensions": {
+                    "dimensions": {
+                        "sheetId": target_sheet_id,
+                        "dimension": "COLUMNS",
+                        "startIndex": 0,
+                    }
+                }
+            },
+            {
+                "updateSheetProperties": {
+                    "properties": {
+                        "sheetId": target_sheet_id,
+                        "gridProperties": {"frozenColumnCount": 1},
+                    },
+                    "fields": "gridProperties.frozenColumnCount",
+                }
+            },
+        ]
+
         self.sheets_service.spreadsheets().batchUpdate(
             spreadsheetId=file_id, body={"requests": requests}
         ).execute()

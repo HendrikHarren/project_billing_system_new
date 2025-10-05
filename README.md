@@ -149,7 +149,9 @@ The project enforces high code quality standards:
 - ✅ Timesheet aggregator for multi-source data consolidation
 - ✅ Trip reimbursement aggregator with duration-based calculation
 - ✅ Weekly hours calculator for capacity and utilization reports
-- ✅ Master timesheet generation with 4 output sheets (Timesheet, Trips, Pivot, Weekly)
+- ✅ Master timesheet generation with 4 output sheets:
+  - Timesheet_master & Trips_master: Static data with formatting
+  - Pivot_master & Weekly_reporting: Native Google Sheets pivot tables
 
 ### Planned Features (Development Roadmap)
 - 🚧 CLI interface for report generation

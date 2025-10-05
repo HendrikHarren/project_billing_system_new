@@ -283,24 +283,24 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
   - Handles trip lookups and duration calculations
   - ISO calendar week numbering with year boundary support
   - 100% test coverage (planned)
-- `pivot_table_generator.py`: ✅ Create pivot tables as pre-computed DataFrames
-  - Pivot_master: Financial summary grouped by name/date/location
-  - Weekly_reporting: Weekly hours matrix (freelancers × weeks 1-52)
+- `google_sheets_writer.py`: ✅ Write formatted output to Google Sheets with native pivot tables
+  - Creates spreadsheet with 4 sheets:
+    - Timesheet_master: Static data (24 columns) with professional formatting
+    - Trips_master: Static data (7 columns) with professional formatting
+    - Pivot_master: **Native Google Sheets pivot table** for financial summary
+    - Weekly_reporting: **Native Google Sheets pivot table** for weekly hours matrix
+  - Uses Google Sheets API `updateCells` with `pivotTable` configuration
   - Supports filtering by project, year, and month
-  - Pre-computed approach (faster, more testable than native Sheets pivots)
-  - 100% test coverage (planned)
-- `google_sheets_writer.py`: ✅ Write formatted output to Google Sheets
-  - Creates spreadsheet with 4 sheets (Timesheet_master, Trips_master, Pivot_master, Weekly_reporting)
-  - Applies professional formatting (bold headers, frozen rows, auto-resize)
+  - Applies professional formatting (bold headers, frozen rows/columns, auto-resize)
   - Moves files to designated output folder
   - Returns file ID and shareable URL
   - 100% test coverage (planned)
 
 **Key Features**:
 - ✅ Professional formatting and styling (headers, freeze, auto-resize)
-- ✅ Pre-computed pivot tables as pandas DataFrames
+- ✅ **Native Google Sheets pivot tables** (interactive, filterable, dynamic)
 - ✅ Large dataset output handling (9000+ rows tested)
-- ✅ Auto-filtering support (project, year, month)
+- ✅ Configurable pivot table filters (project, year, month)
 - ✅ Complete 4-sheet master timesheet generation
 
 ## Data Flow
@@ -365,17 +365,21 @@ AggregatedTimesheetData ──► Master Generator ──► MasterTimesheetData
                               7 columns)            trips_master DataFrames)
                                     │
                                     ▼
-Timesheet DataFrame ──► Pivot Generator ──► PivotTableData
-(With filters)           (Pre-computed         (pivot_master +
-                         DataFrames)            weekly_reporting)
+MasterTimesheetData ──► GoogleSheetsWriter ──► Google Sheets File
+(Static DataFrames +     (Write static data +      (Published Report:
+ Filter params)          Create native pivots)      - Timesheet_master (static)
+                                                     - Trips_master (static)
+                                                     - Pivot_master (native pivot)
+                                                     - Weekly_reporting (native pivot))
                                     │
                                     ▼
-MasterTimesheetData + ──► GoogleSheetsWriter ──► Google Sheets
-PivotTableData             (4 Sheets +              (Published Report:
-                           Formatting)               - Timesheet_master
-                                                     - Trips_master
-                                                     - Pivot_master
-                                                     - Weekly_reporting)
+                         Native Google Sheets Pivot Tables
+                         - Pivot_master: Rows by Name/Date/Location
+                                        Values: Hours, Rate, Billing metrics
+                                        Filters: Project, Year, Month
+                         - Weekly_reporting: Rows by Name, Columns by Week
+                                            Values: Sum of Hours
+                                            Filters: Project, Year
 ```
 
 ## Key Algorithms

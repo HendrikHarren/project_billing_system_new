@@ -2,8 +2,8 @@
 
 This script demonstrates the complete end-to-end workflow:
 1. Read master timesheet data
-2. Generate pivot tables
-3. Write all 4 sheets to Google Sheets
+2. Write static sheets (Timesheet_master, Trips_master) to Google Sheets
+3. Create native Google Sheets pivot tables (Pivot_master, Weekly_reporting)
 4. Apply formatting
 """
 
@@ -11,7 +11,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from src.google_auth import get_drive_service, get_sheets_service
-from src.writers import GoogleSheetsWriter, MasterTimesheetData, PivotTableGenerator
+from src.writers import GoogleSheetsWriter, MasterTimesheetData
 
 
 def main():
@@ -82,12 +82,8 @@ def main():
         timesheet_master=timesheet_master, trips_master=trips_master
     )
 
-    # Generate pivot tables
-    print("\n3. Generating pivot tables...")
-    pivot_generator = PivotTableGenerator(timesheet_master)
-
-    # Auto-detect filters from data
-    # Use the most recent year and month
+    # Auto-detect filters for pivot tables
+    print("\n3. Auto-detecting filters for pivot tables...")
     timesheet_master["Year"] = pd.to_numeric(timesheet_master["Year"], errors="coerce")
     timesheet_master["Month"] = pd.to_numeric(
         timesheet_master["Month"], errors="coerce"
@@ -104,25 +100,20 @@ def main():
         f"Year={most_recent_year}, Month={most_recent_month}"
     )
 
-    pivot_data = pivot_generator.generate(
-        project_filter=most_common_project,
-        year_filter=most_recent_year,
-        month_filter=most_recent_month,
-    )
-
-    print(f"   ✓ Pivot_master: {len(pivot_data.pivot_master)} rows")
-    print(f"   ✓ Weekly_reporting: {len(pivot_data.weekly_reporting)} rows")
-
-    # Write to Google Sheets
+    # Write to Google Sheets with native pivot tables
     print("\n4. Creating Google Sheets file with all 4 sheets...")
+    print("   - Writing static sheets (Timesheet_master, Trips_master)")
+    print("   - Creating native pivot tables (Pivot_master, Weekly_reporting)")
     writer = GoogleSheetsWriter(sheets_api, drive_api)
 
     output_folder_id = "1z2lA8w5VQgKg-_qJsTqwd0Rowicf7S_9"
 
     file_id, url = writer.write_master_timesheet(
         master_data=master_data,
-        pivot_data=pivot_data,
         output_folder_id=output_folder_id,
+        project_filter=most_common_project,
+        year_filter=most_recent_year,
+        month_filter=most_recent_month,
     )
 
     print("\n" + "=" * 80)
@@ -131,10 +122,19 @@ def main():
     print("\nGoogle Sheets URL:")
     print(url)
     print("\nContents:")
-    print(f"  1. Timesheet_master: {len(master_data.timesheet_master)} rows")
-    print(f"  2. Trips_master: {len(master_data.trips_master)} rows")
-    print(f"  3. Pivot_master: {len(pivot_data.pivot_master)} rows")
-    print(f"  4. Weekly_reporting: {len(pivot_data.weekly_reporting)} rows")
+    print(
+        f"  1. Timesheet_master: {len(master_data.timesheet_master)} rows (static data)"
+    )
+    print(f"  2. Trips_master: {len(master_data.trips_master)} rows (static data)")
+    print(
+        f"  3. Pivot_master: Native Google Sheets pivot table "
+        f"(Project={most_common_project}, Year={most_recent_year}, "
+        f"Month={most_recent_month})"
+    )
+    print(
+        f"  4. Weekly_reporting: Native Google Sheets pivot table "
+        f"(Project={most_common_project}, Year={most_recent_year})"
+    )
     print("\n" + "=" * 80)
 
 
