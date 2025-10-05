@@ -65,7 +65,7 @@ def sample_billing_results():
             billable_hours=Decimal("12.0"),
             work_hours=Decimal("10.5"),
             break_hours=Decimal("0.5"),
-            travel_hours=Decimal("2.0"),
+            travel_hours=Decimal("10.0"),
             hours_billed=Decimal("2100.00"),
             travel_surcharge=Decimal("262.50"),
             total_billed=Decimal("2362.50"),
