@@ -185,13 +185,15 @@ class MasterTimesheetGenerator:
         )
 
         # Calculate travel surcharge cost (surcharge percentage of cost)
-        # If travel_surcharge exists and hours_billed > 0, calculate the percentage
-        travel_surcharge_pct = (
-            float(billing.travel_surcharge / billing.hours_billed)
-            if billing.hours_billed > 0 and billing.travel_surcharge > 0
-            else 0.15  # Default 15% from legacy
-        )
-        travel_surcharge_cost = float(billing.total_cost) * travel_surcharge_pct
+        # If travel_surcharge is 0, cost should also be 0
+        if billing.travel_surcharge > 0 and billing.hours_billed > 0:
+            travel_surcharge_pct = float(
+                billing.travel_surcharge / billing.hours_billed
+            )
+            travel_surcharge_cost = float(billing.total_cost) * travel_surcharge_pct
+        else:
+            travel_surcharge_pct = 0.15  # Default 15% from legacy (for display)
+            travel_surcharge_cost = 0.0  # No cost if no surcharge
 
         row = {
             "Name": entry.freelancer_name,
