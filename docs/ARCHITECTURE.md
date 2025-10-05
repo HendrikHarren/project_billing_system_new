@@ -255,7 +255,13 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
   - Support filtering by freelancer, project, and date
   - Generate trip summary statistics (total trips, avg duration, total reimbursement)
   - 100% test coverage with 14 unit tests
-- `weekly_calculator.py`: Generate weekly capacity reports (planned)
+- `weekly_hours_calculator.py`: ✅ Generate weekly capacity and utilization reports
+  - Calculate weekly hours per freelancer using ISO 8601 week numbering
+  - Generate week-by-week matrix (52-week DataFrame)
+  - Handle year boundaries correctly (week 52/53 to week 1)
+  - Support filtering by project, freelancer, and date range
+  - Multiple metrics: billable hours, work hours, entry counts
+  - 100% test coverage with 13 unit tests
 
 **Key Features**:
 - ✅ Efficient large dataset processing (350+ entries tested)
