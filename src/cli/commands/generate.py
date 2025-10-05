@@ -19,6 +19,34 @@ from src.writers.google_sheets_writer import GoogleSheetsWriter
 from src.writers.master_timesheet_generator import MasterTimesheetGenerator
 
 
+def parse_date_input(date_str: str) -> dt.date:
+    """Parse date string in YYYY-MM or YYYY-MM-DD format.
+
+    Args:
+        date_str: Date string in YYYY-MM or YYYY-MM-DD format
+
+    Returns:
+        Parsed date object
+
+    Raises:
+        ValueError: If date format is invalid
+    """
+    # Try YYYY-MM-DD format first
+    try:
+        return dt.datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        pass
+
+    # Try YYYY-MM format (use first day of month)
+    try:
+        parsed = dt.datetime.strptime(date_str, "%Y-%m")
+        return dt.date(parsed.year, parsed.month, 1)
+    except ValueError:
+        raise ValueError(
+            f"Invalid date format: {date_str}. Expected YYYY-MM-DD or YYYY-MM"
+        )
+
+
 @click.command(name="generate-report")
 @click.option(
     "--month",
@@ -27,7 +55,41 @@ from src.writers.master_timesheet_generator import MasterTimesheetGenerator
     default=None,
     help=(
         "Month to generate report for (YYYY-MM format). "
-        "If not specified, uses current + previous year."
+        "Cannot be used with --date-range or --start-date/--end-date."
+    ),
+)
+@click.option(
+    "--date-range",
+    required=False,
+    type=str,
+    nargs=2,
+    default=None,
+    help=(
+        "Custom date range as START END (YYYY-MM format). "
+        "Example: --date-range 2023-01 2024-12. "
+        "Cannot be used with --month or --start-date/--end-date."
+    ),
+)
+@click.option(
+    "--start-date",
+    required=False,
+    type=str,
+    default=None,
+    help=(
+        "Start date (YYYY-MM-DD or YYYY-MM format). "
+        "Must be used with --end-date. "
+        "Cannot be used with --month or --date-range."
+    ),
+)
+@click.option(
+    "--end-date",
+    required=False,
+    type=str,
+    default=None,
+    help=(
+        "End date (YYYY-MM-DD or YYYY-MM format). "
+        "Must be used with --start-date. "
+        "Cannot be used with --month or --date-range."
     ),
 )
 @click.option(
@@ -50,6 +112,9 @@ from src.writers.master_timesheet_generator import MasterTimesheetGenerator
 )
 def generate_report(
     month: Optional[str],
+    date_range: Optional[tuple],
+    start_date: Optional[str],
+    end_date: Optional[str],
     project: Optional[str],
     freelancer: Optional[str],
     output_folder: Optional[str],
@@ -58,24 +123,53 @@ def generate_report(
 
     This command orchestrates the full pipeline:
     1. Read timesheets from Google Drive
-    2. Filter entries by date range (from month, or defaults to current + previous year)
+    2. Filter entries by date range (from parameters or defaults)
     3. Apply optional project and freelancer filters
     4. Calculate billing for filtered entries only (performance optimization)
     5. Generate master timesheet
     6. Write to Google Sheets with pivot table filters
 
-    If month is specified, it's converted to a date range (first to last day of month).
-    If month is not specified, uses default filter (current year + previous year).
+    Date Options (mutually exclusive):
+    - --month: Single month (YYYY-MM)
+    - --date-range: Custom range (START END in YYYY-MM format)
+    - --start-date/--end-date: Custom range (YYYY-MM-DD or YYYY-MM)
+    - No date options: Default to current + previous year
 
     Example:
         billing-cli generate-report --month 2024-10
-        billing-cli generate-report --month 2024-10 --project PROJ001
-        billing-cli generate-report  # Uses default date range (2024-2025)
+        billing-cli generate-report --date-range 2023-01 2024-12
+        billing-cli generate-report --start-date 2024-01-01 --end-date 2024-06-30
+        billing-cli generate-report  # Uses default (2024-2025)
     """
     start_time = time.time()
 
     try:
-        # Handle month parameter - can be None
+        # Validate that only one date option is used
+        date_options_count = sum(
+            [
+                month is not None,
+                date_range is not None,
+                start_date is not None or end_date is not None,
+            ]
+        )
+
+        if date_options_count > 1:
+            click.echo(
+                format_error(
+                    "Cannot use multiple date options. Choose ONE of: "
+                    "--month, --date-range, or --start-date/--end-date"
+                )
+            )
+            raise click.Abort()
+
+        # Validate that start_date and end_date are used together
+        if (start_date is not None) != (end_date is not None):
+            click.echo(
+                format_error("--start-date and --end-date must be used together")
+            )
+            raise click.Abort()
+
+        # Handle month parameter
         if month is not None:
             # Validate month format and calculate date range
             try:
@@ -96,6 +190,61 @@ def generate_report(
 
             click.echo(format_info(f"Generating report for {month}..."))
             click.echo(format_info(f"  Date range: {start_date} to {end_date}"))
+
+        # Handle date-range parameter
+        elif date_range is not None:
+            try:
+                # date_range is a tuple of (start, end) in YYYY-MM format
+                start_str, end_str = date_range
+
+                # Parse start date (first day of month)
+                start_parsed = dt.datetime.strptime(start_str, "%Y-%m")
+                start_date = dt.date(start_parsed.year, start_parsed.month, 1)
+
+                # Parse end date (last day of month)
+                end_parsed = dt.datetime.strptime(end_str, "%Y-%m")
+                _, last_day = monthrange(end_parsed.year, end_parsed.month)
+                end_date = dt.date(end_parsed.year, end_parsed.month, last_day)
+
+                year = None
+                month_num = None
+                filename_prefix = f"Billing_Report_{start_str}_to_{end_str}"
+            except ValueError as e:
+                error_msg = (
+                    f"Invalid date-range format. "
+                    f"Expected YYYY-MM YYYY-MM. Error: {e}"
+                )
+                click.echo(format_error(error_msg))
+                raise click.Abort()
+
+            click.echo(format_info("Generating report for date range..."))
+            click.echo(format_info(f"  Date range: {start_date} to {end_date}"))
+
+        # Handle start-date and end-date parameters
+        elif start_date is not None and end_date is not None:
+            try:
+                start_date = parse_date_input(start_date)
+                end_date = parse_date_input(end_date)
+
+                if start_date > end_date:
+                    click.echo(
+                        format_error("start-date must be before or equal to end-date")
+                    )
+                    raise click.Abort()
+
+                year = None
+                month_num = None
+                filename_prefix = (
+                    f"Billing_Report_{start_date.isoformat()}_to_{end_date.isoformat()}"
+                )
+            except ValueError as e:
+                click.echo(format_error(str(e)))
+                raise click.Abort()
+
+            click.echo(format_info("Generating report for custom date range..."))
+            click.echo(format_info(f"  Date range: {start_date} to {end_date}"))
+
+        # No date parameters - use defaults
         else:
             # Use defaults (current + previous year)
             start_date = None
