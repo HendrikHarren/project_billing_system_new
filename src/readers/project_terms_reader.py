@@ -306,9 +306,9 @@ class ProjectTermsReader:
                 project_code=project_code,
                 hourly_rate=Decimal(hourly_rate_str),
                 travel_surcharge_percentage=Decimal("0"),
-                travel_time_percentage=Decimal(travel_time_str)
-                if travel_time_str
-                else Decimal("0"),
+                travel_time_percentage=(
+                    Decimal(travel_time_str) if travel_time_str else Decimal("0")
+                ),
                 cost_per_hour=Decimal(cost_per_hour_str),
             )
 
