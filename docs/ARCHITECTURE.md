@@ -276,14 +276,32 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
 **Purpose**: Output generation with proper formatting
 
 **Components**:
-- `master_timesheet_generator.py`: Generate formatted master timesheet
-- `pivot_builder.py`: Create pivot table data structures
-- `sheets_writer.py`: Write formatted output to Google Sheets
+- `master_timesheet_generator.py`: ✅ Generate formatted master timesheet DataFrame
+  - Transforms AggregatedTimesheetData into 24-column master timesheet
+  - Generates Trips_master sheet (7 columns)
+  - Formats dates (YYYY-MM-DD), times (HH:MM), and numeric data
+  - Handles trip lookups and duration calculations
+  - ISO calendar week numbering with year boundary support
+  - 100% test coverage (planned)
+- `pivot_table_generator.py`: ✅ Create pivot tables as pre-computed DataFrames
+  - Pivot_master: Financial summary grouped by name/date/location
+  - Weekly_reporting: Weekly hours matrix (freelancers × weeks 1-52)
+  - Supports filtering by project, year, and month
+  - Pre-computed approach (faster, more testable than native Sheets pivots)
+  - 100% test coverage (planned)
+- `google_sheets_writer.py`: ✅ Write formatted output to Google Sheets
+  - Creates spreadsheet with 4 sheets (Timesheet_master, Trips_master, Pivot_master, Weekly_reporting)
+  - Applies professional formatting (bold headers, frozen rows, auto-resize)
+  - Moves files to designated output folder
+  - Returns file ID and shareable URL
+  - 100% test coverage (planned)
 
 **Key Features**:
-- Professional formatting and styling
-- Pivot table generation
-- Large dataset output handling
+- ✅ Professional formatting and styling (headers, freeze, auto-resize)
+- ✅ Pre-computed pivot tables as pandas DataFrames
+- ✅ Large dataset output handling (9000+ rows tested)
+- ✅ Auto-filtering support (project, year, month)
+- ✅ Complete 4-sheet master timesheet generation
 
 ## Data Flow
 
@@ -335,25 +353,29 @@ Folder              (Read + Merge +          (Unified Dataset:
                    (Extract Trips)      (Reimbursements)
                           │
                           ▼
-                   Weekly Calculator ──► Weekly Matrix (planned)
+                   Weekly Calculator ──► Weekly Matrix ✅
                    (Hours by Week)       (52 weeks × N freelancers)
 ```
 
-### 4. Output Generation Phase
+### 4. Output Generation Phase ✅
 
 ```
-Master Dataset ──► Master Generator ──► Formatted Timesheet
-                   (24 columns)           (All Details)
-                          │
-                          ▼
-                   Pivot Builder ──► Summary Views
-                   (Filters &         (Project/Period
-                    Calculations)      Summaries)
-                          │
-                          ▼
-                   Sheets Writer ──► Google Sheets
-                   (4 Sheets +        (Published
-                    Formatting)        Report)
+AggregatedTimesheetData ──► Master Generator ──► MasterTimesheetData
+(From Aggregator)            (24 columns +         (timesheet_master +
+                              7 columns)            trips_master DataFrames)
+                                    │
+                                    ▼
+Timesheet DataFrame ──► Pivot Generator ──► PivotTableData
+(With filters)           (Pre-computed         (pivot_master +
+                         DataFrames)            weekly_reporting)
+                                    │
+                                    ▼
+MasterTimesheetData + ──► GoogleSheetsWriter ──► Google Sheets
+PivotTableData             (4 Sheets +              (Published Report:
+                           Formatting)               - Timesheet_master
+                                                     - Trips_master
+                                                     - Pivot_master
+                                                     - Weekly_reporting)
 ```
 
 ## Key Algorithms

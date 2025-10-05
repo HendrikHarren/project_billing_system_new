@@ -21,7 +21,7 @@ project_billing_system_new/
 │   ├── validators/      # Data validation layer
 │   ├── calculators/     # Business logic (time, billing, trips)
 │   ├── aggregators/     # Data aggregation and summarization
-│   └── writers/         # Output generation (planned)
+│   └── writers/         # Output generation (master timesheet, pivot tables)
 ├── tests/
 │   ├── unit/           # Unit tests (mocked dependencies)
 │   └── integration/    # Integration tests (real APIs)
@@ -183,9 +183,12 @@ python test_connection.py
 
 ### In Progress (🚧)
 - **Phase 5**: Report generation
-  - Issue #13: Master timesheet generator
   - Issue #14: Pivot table builder
   - Issue #15: Google Sheets writer
+
+### Recently Completed (✅)
+- **Phase 5**: Report generation
+  - Issue #13: Master timesheet generator (completed 2025-10-05)
 
 ### Key Algorithms Implemented
 - **Overnight Shift Handling**: Correct time calculation across midnight
