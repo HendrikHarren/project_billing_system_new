@@ -178,9 +178,9 @@ def generate_report(
                 month_num = month_date.month
 
                 # Calculate first and last day of the month
-                start_date = dt.date(year, month_num, 1)
+                start_date_parsed = dt.date(year, month_num, 1)
                 _, last_day = monthrange(year, month_num)
-                end_date = dt.date(year, month_num, last_day)
+                end_date_parsed = dt.date(year, month_num, last_day)
                 filename_prefix = f"Billing_Report_{month}"
             except ValueError:
                 click.echo(
@@ -189,7 +189,9 @@ def generate_report(
                 raise click.Abort()
 
             click.echo(format_info(f"Generating report for {month}..."))
-            click.echo(format_info(f"  Date range: {start_date} to {end_date}"))
+            click.echo(
+                format_info(f"  Date range: {start_date_parsed} to {end_date_parsed}")
+            )
 
         # Handle date-range parameter
         elif date_range is not None:
@@ -199,12 +201,12 @@ def generate_report(
 
                 # Parse start date (first day of month)
                 start_parsed = dt.datetime.strptime(start_str, "%Y-%m")
-                start_date = dt.date(start_parsed.year, start_parsed.month, 1)
+                start_date_parsed = dt.date(start_parsed.year, start_parsed.month, 1)
 
                 # Parse end date (last day of month)
                 end_parsed = dt.datetime.strptime(end_str, "%Y-%m")
                 _, last_day = monthrange(end_parsed.year, end_parsed.month)
-                end_date = dt.date(end_parsed.year, end_parsed.month, last_day)
+                end_date_parsed = dt.date(end_parsed.year, end_parsed.month, last_day)
 
                 year = None
                 month_num = None
@@ -218,15 +220,17 @@ def generate_report(
                 raise click.Abort()
 
             click.echo(format_info("Generating report for date range..."))
-            click.echo(format_info(f"  Date range: {start_date} to {end_date}"))
+            click.echo(
+                format_info(f"  Date range: {start_date_parsed} to {end_date_parsed}")
+            )
 
         # Handle start-date and end-date parameters
         elif start_date is not None and end_date is not None:
             try:
-                start_date = parse_date_input(start_date)
-                end_date = parse_date_input(end_date)
+                start_date_parsed = parse_date_input(start_date)
+                end_date_parsed = parse_date_input(end_date)
 
-                if start_date > end_date:
+                if start_date_parsed > end_date_parsed:
                     click.echo(
                         format_error("start-date must be before or equal to end-date")
                     )
@@ -235,20 +239,23 @@ def generate_report(
                 year = None
                 month_num = None
                 filename_prefix = (
-                    f"Billing_Report_{start_date.isoformat()}_to_{end_date.isoformat()}"
+                    f"Billing_Report_{start_date_parsed.isoformat()}_to_"
+                    f"{end_date_parsed.isoformat()}"
                 )
             except ValueError as e:
                 click.echo(format_error(str(e)))
                 raise click.Abort()
 
             click.echo(format_info("Generating report for custom date range..."))
-            click.echo(format_info(f"  Date range: {start_date} to {end_date}"))
+            click.echo(
+                format_info(f"  Date range: {start_date_parsed} to {end_date_parsed}")
+            )
 
         # No date parameters - use defaults
         else:
             # Use defaults (current + previous year)
-            start_date = None
-            end_date = None
+            start_date_parsed = None
+            end_date_parsed = None
             year = None
             month_num = None
             today = dt.date.today()
@@ -297,8 +304,8 @@ def generate_report(
 
         aggregated_data = aggregator.aggregate_timesheets(
             settings.timesheet_folder_id,
-            start_date=start_date,
-            end_date=end_date,
+            start_date=start_date_parsed,
+            end_date=end_date_parsed,
             project_code=project,
             freelancer_name=freelancer,
         )
@@ -315,7 +322,7 @@ def generate_report(
 
         # Stage 4: Write to Google Sheets
         click.echo(tracker.get_current_message())
-        writer = GoogleSheetsWriter(sheets_service, drive_service)
+        writer = GoogleSheetsWriter(sheets_service._service, drive_service._service)
         folder_id = output_folder or settings.monthly_invoicing_folder_id
 
         file_id, url = writer.write_master_timesheet(

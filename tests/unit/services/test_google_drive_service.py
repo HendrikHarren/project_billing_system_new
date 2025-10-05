@@ -64,7 +64,7 @@ class TestGoogleDriveService:
                 assert service is not None
 
                 mock_auth.assert_called_once_with(
-                    scopes=["https://www.googleapis.com/auth/drive.readonly"]
+                    scopes=["https://www.googleapis.com/auth/drive.file"]
                 )
                 mock_build.assert_called_once_with(
                     "drive", "v3", credentials=mock_credentials
