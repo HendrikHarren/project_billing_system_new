@@ -181,14 +181,12 @@ python test_connection.py
 - **Phase 3**: Time calculator, trip calculator, billing calculator
 - **Phase 4**: Timesheet aggregator, trip aggregator, weekly hours calculator
 
-### In Progress (🚧)
-- **Phase 5**: Report generation
-  - Issue #14: Pivot table builder
-  - Issue #15: Google Sheets writer
-
 ### Recently Completed (✅)
 - **Phase 5**: Report generation
   - Issue #13: Master timesheet generator (completed 2025-10-05)
+  - Issue #14: Pivot table builder (completed 2025-10-05, implemented as native pivot tables)
+  - Issue #15: Google Sheets writer (completed 2025-10-05)
+
 
 ### Key Algorithms Implemented
 - **Overnight Shift Handling**: Correct time calculation across midnight
