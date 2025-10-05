@@ -28,32 +28,32 @@ class TestProjectTermsReader:
 
     @pytest.fixture
     def sample_main_terms_data(self):
-        """Sample project terms data from Google Sheets."""
+        """Sample project terms data from Google Sheets (actual column names)."""
         return pd.DataFrame(
             [
                 {
-                    "Freelancer": "John Doe",
-                    "Project Code": "PROJ-001",
-                    "Hourly Rate": "85.00",
-                    "Travel Surcharge %": "15.0",
-                    "Travel Time %": "50.0",
-                    "Cost/Hour": "60.00",
+                    "Project": "PROJ-001",
+                    "Consultant_ID": "1",
+                    "Name": "John Doe",
+                    "Rate": "85.00",
+                    "Cost": "60.00",
+                    "Share of travel as work": "0.5",
                 },
                 {
-                    "Freelancer": "Jane Smith",
-                    "Project Code": "PROJ-002",
-                    "Hourly Rate": "90.00",
-                    "Travel Surcharge %": "20.0",
-                    "Travel Time %": "100.0",
-                    "Cost/Hour": "65.00",
+                    "Project": "PROJ-002",
+                    "Consultant_ID": "2",
+                    "Name": "Jane Smith",
+                    "Rate": "90.00",
+                    "Cost": "65.00",
+                    "Share of travel as work": "1.0",
                 },
                 {
-                    "Freelancer": "John Doe",
-                    "Project Code": "PROJ-003",
-                    "Hourly Rate": "95.00",
-                    "Travel Surcharge %": "10.0",
-                    "Travel Time %": "50.0",
-                    "Cost/Hour": "70.00",
+                    "Project": "PROJ-003",
+                    "Consultant_ID": "1",
+                    "Name": "John Doe",
+                    "Rate": "95.00",
+                    "Cost": "70.00",
+                    "Share of travel as work": "0.5",
                 },
             ]
         )
@@ -123,8 +123,8 @@ class TestProjectTermsReader:
         assert terms_dict[key].freelancer_name == "John Doe"
         assert terms_dict[key].project_code == "PROJ-001"
         assert terms_dict[key].hourly_rate == Decimal("85.00")
-        assert terms_dict[key].travel_surcharge_percentage == Decimal("15.0")
-        assert terms_dict[key].travel_time_percentage == Decimal("50.0")
+        assert terms_dict[key].travel_surcharge_percentage == Decimal("0")
+        assert terms_dict[key].travel_time_percentage == Decimal("0.5")
         assert terms_dict[key].cost_per_hour == Decimal("60.00")
 
     def test_get_all_project_terms_uses_cache_on_second_call(
@@ -253,12 +253,12 @@ class TestProjectTermsReader:
     def test_parse_main_terms_row_valid_data(self, project_terms_reader):
         """Test parsing a valid main terms row."""
         row = {
-            "Freelancer": "John Doe",
-            "Project Code": "PROJ-001",
-            "Hourly Rate": "85.00",
-            "Travel Surcharge %": "15.0",
-            "Travel Time %": "50.0",
-            "Cost/Hour": "60.00",
+            "Name": "John Doe",
+            "Project": "PROJ-001",
+            "Rate": "85.00",
+            "_TravelSurcharge_REMOVED": "15.0",
+            "Share of travel as work": "50.0",
+            "Cost": "60.00",
         }
 
         terms = project_terms_reader._parse_main_terms_row(row)
@@ -271,12 +271,12 @@ class TestProjectTermsReader:
     def test_parse_main_terms_row_with_whitespace(self, project_terms_reader):
         """Test parsing row with whitespace in fields."""
         row = {
-            "Freelancer": " John Doe ",
-            "Project Code": " PROJ-001 ",
-            "Hourly Rate": " 85.00 ",
-            "Travel Surcharge %": " 15.0 ",
-            "Travel Time %": " 50.0 ",
-            "Cost/Hour": " 60.00 ",
+            "Name": " John Doe ",
+            "Project": " PROJ-001 ",
+            "Rate": " 85.00 ",
+            "_TravelSurcharge_REMOVED": " 15.0 ",
+            "Share of travel as work": " 50.0 ",
+            "Cost": " 60.00 ",
         }
 
         terms = project_terms_reader._parse_main_terms_row(row)
@@ -290,12 +290,12 @@ class TestProjectTermsReader:
     ):
         """Test parsing row with missing freelancer returns None."""
         row = {
-            "Freelancer": "",
-            "Project Code": "PROJ-001",
-            "Hourly Rate": "85.00",
-            "Travel Surcharge %": "15.0",
-            "Travel Time %": "50.0",
-            "Cost/Hour": "60.00",
+            "Name": "",
+            "Project": "PROJ-001",
+            "Rate": "85.00",
+            "_TravelSurcharge_REMOVED": "15.0",
+            "Share of travel as work": "50.0",
+            "Cost": "60.00",
         }
 
         terms = project_terms_reader._parse_main_terms_row(row)
@@ -304,12 +304,12 @@ class TestProjectTermsReader:
     def test_parse_main_terms_row_invalid_rate_returns_none(self, project_terms_reader):
         """Test parsing row with invalid rate returns None."""
         row = {
-            "Freelancer": "John Doe",
-            "Project Code": "PROJ-001",
-            "Hourly Rate": "invalid",
-            "Travel Surcharge %": "15.0",
-            "Travel Time %": "50.0",
-            "Cost/Hour": "60.00",
+            "Name": "John Doe",
+            "Project": "PROJ-001",
+            "Rate": "invalid",
+            "_TravelSurcharge_REMOVED": "15.0",
+            "Share of travel as work": "50.0",
+            "Cost": "60.00",
         }
 
         with patch("src.readers.project_terms_reader.logger") as mock_logger:
@@ -322,12 +322,12 @@ class TestProjectTermsReader:
     ):
         """Test parsing row where cost exceeds rate returns None."""
         row = {
-            "Freelancer": "John Doe",
-            "Project Code": "PROJ-001",
-            "Hourly Rate": "60.00",
-            "Travel Surcharge %": "15.0",
-            "Travel Time %": "50.0",
-            "Cost/Hour": "85.00",  # Cost > Rate
+            "Name": "John Doe",
+            "Project": "PROJ-001",
+            "Rate": "60.00",
+            "_TravelSurcharge_REMOVED": "15.0",
+            "Share of travel as work": "50.0",
+            "Cost": "85.00",  # Cost > Rate
         }
 
         with patch("src.readers.project_terms_reader.logger") as mock_logger:
@@ -462,20 +462,20 @@ class TestProjectTermsReader:
         data = pd.DataFrame(
             [
                 {
-                    "Freelancer": "John Doe",
-                    "Project Code": "PROJ-001",
-                    "Hourly Rate": "85.00",
-                    "Travel Surcharge %": "15.0",
-                    "Travel Time %": "50.0",
-                    "Cost/Hour": "60.00",
+                    "Name": "John Doe",
+                    "Project": "PROJ-001",
+                    "Rate": "85.00",
+                    "_TravelSurcharge_REMOVED": "15.0",
+                    "Share of travel as work": "50.0",
+                    "Cost": "60.00",
                 },
                 {
-                    "Freelancer": "Jane Smith",
-                    "Project Code": "PROJ-001",
-                    "Hourly Rate": "90.00",
-                    "Travel Surcharge %": "20.0",
-                    "Travel Time %": "100.0",
-                    "Cost/Hour": "65.00",
+                    "Name": "Jane Smith",
+                    "Project": "PROJ-001",
+                    "Rate": "90.00",
+                    "_TravelSurcharge_REMOVED": "20.0",
+                    "Share of travel as work": "100.0",
+                    "Cost": "65.00",
                 },
             ]
         )
@@ -496,12 +496,12 @@ class TestProjectTermsReader:
         data = pd.DataFrame(
             [
                 {
-                    "Freelancer": "John Doe",
-                    "Project Code": "PROJ-001",
-                    "Hourly Rate": "85.50",
-                    "Travel Surcharge %": "15.25",
-                    "Travel Time %": "50.75",
-                    "Cost/Hour": "60.33",
+                    "Name": "John Doe",
+                    "Project": "PROJ-001",
+                    "Rate": "85.50",
+                    "_TravelSurcharge_REMOVED": "15.25",
+                    "Share of travel as work": "50.75",
+                    "Cost": "60.33",
                 }
             ]
         )
@@ -510,7 +510,7 @@ class TestProjectTermsReader:
         terms = project_terms_reader.get_project_terms("John Doe", "PROJ-001")
 
         assert terms.hourly_rate == Decimal("85.50")
-        assert terms.travel_surcharge_percentage == Decimal("15.25")
+        assert terms.travel_surcharge_percentage == Decimal("0")
         assert terms.travel_time_percentage == Decimal("50.75")
         assert terms.cost_per_hour == Decimal("60.33")
 
