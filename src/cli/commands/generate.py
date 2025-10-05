@@ -1,7 +1,8 @@
 """Generate report command."""
 
+import datetime as dt
 import time
-from datetime import datetime
+from calendar import monthrange
 from typing import Optional
 
 import click
@@ -53,28 +54,40 @@ def generate_report(
 
     This command orchestrates the full pipeline:
     1. Read timesheets from Google Drive
-    2. Load project terms
-    3. Aggregate and calculate billing
-    4. Generate master timesheet
-    5. Write to Google Sheets
+    2. Filter entries by date range (derived from month)
+    3. Apply optional project and freelancer filters
+    4. Calculate billing for filtered entries only (performance optimization)
+    5. Generate master timesheet
+    6. Write to Google Sheets with pivot table filters
+
+    The month parameter is converted to a date range (first to last day of month)
+    and used to filter entries before billing calculation, improving performance
+    for large datasets.
 
     Example:
         billing-cli generate-report --month 2024-10
         billing-cli generate-report --month 2024-10 --project PROJ001
+        billing-cli generate-report --month 2024-10 --freelancer "John Doe"
     """
     start_time = time.time()
 
     try:
-        # Validate month format
+        # Validate month format and calculate date range
         try:
-            month_date = datetime.strptime(month, "%Y-%m")
+            month_date = dt.datetime.strptime(month, "%Y-%m")
             year = month_date.year
             month_num = month_date.month
+
+            # Calculate first and last day of the month
+            start_date = dt.date(year, month_num, 1)
+            _, last_day = monthrange(year, month_num)
+            end_date = dt.date(year, month_num, last_day)
         except ValueError:
             click.echo(format_error(f"Invalid month format: {month}. Expected YYYY-MM"))
             raise click.Abort()
 
         click.echo(format_info(f"Generating report for {month}..."))
+        click.echo(format_info(f"  Date range: {start_date} to {end_date}"))
         if project:
             click.echo(format_info(f"  Filter: Project = {project}"))
         if freelancer:
@@ -102,13 +115,19 @@ def generate_report(
         )
         tracker.advance()
 
-        # Stage 2: Aggregate data
+        # Stage 2: Aggregate data with filters
         click.echo(tracker.get_current_message())
         aggregator = TimesheetAggregator(
             timesheet_reader, project_terms_reader, drive_service
         )
 
-        aggregated_data = aggregator.aggregate_timesheets(settings.timesheet_folder_id)
+        aggregated_data = aggregator.aggregate_timesheets(
+            settings.timesheet_folder_id,
+            start_date=start_date,
+            end_date=end_date,
+            project_code=project,
+            freelancer_name=freelancer,
+        )
         tracker.advance(f"Processed {len(aggregated_data.entries)} entries")
 
         # Stage 3: Generate master timesheet

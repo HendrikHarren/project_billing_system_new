@@ -255,13 +255,14 @@ The billing system transforms freelancer timesheet data from Google Sheets into 
 **Components**:
 - `timesheet_aggregator.py`: ✅ Combine multiple freelancer timesheets
   - Read all timesheets from Google Drive folder
+  - **Filter during aggregation** for performance (date range, project, freelancer)
+  - Calculate billing only for filtered entries (reduces processing time)
   - Merge with project billing terms for rate lookups
-  - Calculate billing for all entries using existing calculators
   - Identify trips from consecutive on-site work
-  - Filter by date range, project code, or freelancer name
+  - **Post-aggregation filtering** methods also available (backward compatible)
   - Performance optimized with caching and batch processing
-  - Supports 30+ timesheets efficiently
-  - 86% test coverage with 12 unit tests
+  - Supports 30+ timesheets with configurable filtering
+  - 93% test coverage with 19 unit tests (Issue #43)
 - `trip_aggregator.py`: ✅ Extract and organize trip reimbursements
   - Calculate reimbursements based on trip duration tiers
   - Filter trips with non-zero reimbursements
@@ -406,15 +407,22 @@ Raw Data ──► Time Calculator ──► Hours Calculated
 
 ```
 Google Drive ──► Timesheet Aggregator ──► AggregatedTimesheetData
-Folder              (Read + Merge +          (Unified Dataset:
-(30+ files)         Calculate)                - All entries
-                          │                    - Billing results
-                          │                    - Trips identified)
-                          ▼
-                   Filter Capabilities ──► Filtered Data
-                   (Date Range,             (By date/project/
-                    Project,                 freelancer)
-                    Freelancer)
+Folder              (Read All Files)          (Filtered Dataset:
+(30+ files)                │                   - Filtered entries
+                           │                   - Billing results
+                           ▼                   - Trips identified)
+                 ┌─────────────────────┐
+                 │  Filter BEFORE      │  ← Performance Optimization
+                 │  Billing Calc       │     (Issue #43)
+                 │  - Date Range       │
+                 │  - Project Code     │
+                 │  - Freelancer       │
+                 └─────────┬───────────┘
+                           │
+                           ▼
+                 Calculate Billing     ──► Only for
+                 & Identify Trips          Filtered Entries
+                                          (Faster Processing)
                           │
                           ▼
                    Trip Aggregator ──► Trip Summary ✅
