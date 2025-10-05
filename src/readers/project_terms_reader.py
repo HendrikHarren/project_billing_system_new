@@ -201,8 +201,8 @@ class ProjectTermsReader:
             sheet_name: Name of the sheet to read
         """
         try:
-            # Read data from sheet (assuming headers in row 1, data starts row 2)
-            range_name = f"{sheet_name}!A2:F"
+            # Read data from sheet including headers (row 1)
+            range_name = f"{sheet_name}!A1:F"
 
             # Use cache service if available, otherwise direct read
             if self.cache_service:
@@ -232,15 +232,15 @@ class ProjectTermsReader:
             logger.error(f"Failed to read project terms from {sheet_name}: {e}")
             raise
 
-    def _read_trip_terms_sheet(self, sheet_name: str = "Trip Terms"):
+    def _read_trip_terms_sheet(self, sheet_name: str = "Trip terms"):
         """Read and parse trip reimbursement terms from the sheet.
 
         Args:
             sheet_name: Name of the sheet to read
         """
         try:
-            # Read data from sheet
-            range_name = f"{sheet_name}!A2:D"
+            # Read data from sheet including headers
+            range_name = f"{sheet_name}!A1:D"
 
             # Use cache service if available, otherwise direct read
             if self.cache_service:
@@ -284,25 +284,31 @@ class ProjectTermsReader:
             ProjectTerms object if row is valid, None if row should be skipped
         """
         try:
-            # Extract and clean field values
-            freelancer_name = str(row.get("Freelancer", "")).strip()
-            project_code = str(row.get("Project Code", "")).strip()
-            hourly_rate_str = str(row.get("Hourly Rate", "")).strip()
-            travel_surcharge_str = str(row.get("Travel Surcharge %", "")).strip()
-            travel_time_str = str(row.get("Travel Time %", "")).strip()
-            cost_per_hour_str = str(row.get("Cost/Hour", "")).strip()
+            # Extract and clean field values using actual column names
+            freelancer_name = str(row.get("Name", "")).strip()
+            project_code = str(row.get("Project", "")).strip()
+            hourly_rate_str = str(row.get("Rate", "")).strip()
+            cost_per_hour_str = str(row.get("Cost", "")).strip()
+            travel_time_str = str(row.get("Share of travel as work", "")).strip()
 
             # Skip empty rows
             if not freelancer_name or not project_code:
                 return None
 
+            # Skip rows with missing required numeric values
+            if not hourly_rate_str or not cost_per_hour_str:
+                return None
+
             # Create ProjectTerms object
+            # Note: travel_surcharge_percentage is not in the sheet, defaulting to 0
             terms = ProjectTerms(
                 freelancer_name=freelancer_name,
                 project_code=project_code,
                 hourly_rate=Decimal(hourly_rate_str),
-                travel_surcharge_percentage=Decimal(travel_surcharge_str),
-                travel_time_percentage=Decimal(travel_time_str),
+                travel_surcharge_percentage=Decimal("0"),
+                travel_time_percentage=Decimal(travel_time_str)
+                if travel_time_str
+                else Decimal("0"),
                 cost_per_hour=Decimal(cost_per_hour_str),
             )
 
