@@ -4,8 +4,17 @@
 This script demonstrates the new date range filtering capability in
 TimesheetAggregator for improved performance when processing large datasets.
 
-Before: Read all entries → Calculate all → Filter
-After:  Read all entries → Filter → Calculate only filtered (faster!)
+DEFAULT BEHAVIOR:
+- Automatically filters to current year + previous year (2024-2025)
+- This prevents pivot table performance issues with too much data
+- Safety measure to avoid processing years of historical data
+
+CUSTOM FILTERING:
+- Can override defaults by passing start_date/end_date explicitly
+- Filters applied BEFORE billing calculation for performance
+
+Before Issue #43: Read all → Calculate all → Filter
+After Issue #43:  Read all → Filter (with defaults) → Calculate filtered (faster!)
 
 Run this script to see the performance difference and filtering behavior.
 """

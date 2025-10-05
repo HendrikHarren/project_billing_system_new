@@ -122,7 +122,7 @@ class TimesheetAggregator:
         This method:
         1. Lists all timesheet files in the specified folder
         2. Reads and parses each timesheet
-        3. Applies optional filters (date range, project, freelancer)
+        3. Applies filters (defaults: current year + previous year for performance)
         4. Loads project billing terms
         5. Calculates billing for filtered entries only
         6. Identifies trips from consecutive on-site work
@@ -130,10 +130,10 @@ class TimesheetAggregator:
 
         Args:
             folder_id: Google Drive folder ID containing timesheet files
-            start_date: Filter entries >= this date (optional)
-            end_date: Filter entries <= this date (optional)
-            project_code: Filter by project code (optional)
-            freelancer_name: Filter by freelancer name (optional)
+            start_date: Filter entries >= this date (default: Jan 1 of previous year)
+            end_date: Filter entries <= this date (default: Dec 31 of current year)
+            project_code: Filter by project code (optional, no default)
+            freelancer_name: Filter by freelancer name (optional, no default)
 
         Returns:
             AggregatedTimesheetData with filtered entries, billing results, and trips
@@ -142,10 +142,15 @@ class TimesheetAggregator:
             KeyError: If billing terms not found for a freelancer-project combination
             Exception: If there are errors accessing Google Drive or reading files
 
+        Note:
+            By default, filters to current year + previous year to prevent pivot table
+            performance issues. This is a safety measure to avoid processing too much
+            data which would make pivot tables unusably slow.
+
         Example:
-            >>> # Get all data
+            >>> # Default: current year + previous year
             >>> data = aggregator.aggregate_timesheets("1abc...xyz")
-            >>> # Filter by date range
+            >>> # Filter by specific date range
             >>> data = aggregator.aggregate_timesheets(
             ...     "1abc...xyz",
             ...     start_date=dt.date(2023, 6, 1),
@@ -160,10 +165,21 @@ class TimesheetAggregator:
             ... )
         """
         logger.info(f"Starting timesheet aggregation from folder: {folder_id}")
-        if start_date or end_date:
-            logger.info(
-                f"Date filter: {start_date or 'earliest'} to {end_date or 'latest'}"
-            )
+
+        # Apply default date filter: current year + previous year
+        # This prevents pivot table performance issues with too much data
+        today = dt.date.today()
+        current_year = today.year
+
+        if start_date is None:
+            start_date = dt.date(current_year - 1, 1, 1)  # Jan 1 of previous year
+            logger.info(f"Using default start_date: {start_date}")
+
+        if end_date is None:
+            end_date = dt.date(current_year, 12, 31)  # Dec 31 of current year
+            logger.info(f"Using default end_date: {end_date}")
+
+        logger.info(f"Date filter: {start_date} to {end_date}")
         if project_code:
             logger.info(f"Project filter: {project_code}")
         if freelancer_name:
@@ -211,20 +227,14 @@ class TimesheetAggregator:
         # Step 3: Apply filters to entries (before calculating billing)
         filtered_entries = all_entries
 
-        # Apply date range filters
-        if start_date is not None:
-            filtered_entries = [e for e in filtered_entries if e.date >= start_date]
-            logger.info(
-                f"Filtered by start_date {start_date}: "
-                f"{len(filtered_entries)} entries remaining"
-            )
-
-        if end_date is not None:
-            filtered_entries = [e for e in filtered_entries if e.date <= end_date]
-            logger.info(
-                f"Filtered by end_date {end_date}: "
-                f"{len(filtered_entries)} entries remaining"
-            )
+        # Apply date range filters (start_date and end_date always set by defaults)
+        filtered_entries = [
+            e for e in filtered_entries if start_date <= e.date <= end_date
+        ]
+        logger.info(
+            f"Filtered by date range {start_date} to {end_date}: "
+            f"{len(filtered_entries)} entries remaining"
+        )
 
         # Apply project filter
         if project_code is not None:

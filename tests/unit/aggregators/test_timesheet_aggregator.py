@@ -40,11 +40,14 @@ def mock_drive_service():
 
 @pytest.fixture
 def sample_timesheet_entries() -> List[TimesheetEntry]:
-    """Create sample timesheet entries for testing."""
+    """Create sample timesheet entries for testing.
+
+    Uses dates from 2024 (previous year) to work with default filter.
+    """
     return [
         TimesheetEntry(
             freelancer_name="John Doe",
-            date=dt.date(2023, 6, 15),
+            date=dt.date(2024, 6, 15),
             project_code="PROJ-001",
             start_time=dt.time(9, 0),
             end_time=dt.time(17, 0),
@@ -54,7 +57,7 @@ def sample_timesheet_entries() -> List[TimesheetEntry]:
         ),
         TimesheetEntry(
             freelancer_name="John Doe",
-            date=dt.date(2023, 6, 16),
+            date=dt.date(2024, 6, 16),
             project_code="PROJ-001",
             start_time=dt.time(9, 0),
             end_time=dt.time(17, 0),
@@ -64,7 +67,7 @@ def sample_timesheet_entries() -> List[TimesheetEntry]:
         ),
         TimesheetEntry(
             freelancer_name="Jane Smith",
-            date=dt.date(2023, 6, 15),
+            date=dt.date(2024, 6, 15),
             project_code="PROJ-002",
             start_time=dt.time(10, 0),
             end_time=dt.time(18, 0),
@@ -265,16 +268,16 @@ class TestFilterByDateRange:
         terms_map = {("John Doe", "PROJ-001"): sample_project_terms[0]}
         mock_project_terms_reader.get_all_project_terms.return_value = terms_map
 
-        # Aggregate first
+        # Aggregate first (uses default date filter)
         data = aggregator.aggregate_timesheets(folder_id)
 
         # Filter to only June 15
         filtered = aggregator.filter_by_date_range(
-            data, start_date=dt.date(2023, 6, 15), end_date=dt.date(2023, 6, 15)
+            data, start_date=dt.date(2024, 6, 15), end_date=dt.date(2024, 6, 15)
         )
 
         assert len(filtered.entries) == 1
-        assert filtered.entries[0].date == dt.date(2023, 6, 15)
+        assert filtered.entries[0].date == dt.date(2024, 6, 15)
 
     def test_filter_by_date_range_no_matches(
         self,
@@ -296,9 +299,9 @@ class TestFilterByDateRange:
 
         data = aggregator.aggregate_timesheets(folder_id)
 
-        # Filter to different date range
+        # Filter to different date range (outside the data range)
         filtered = aggregator.filter_by_date_range(
-            data, start_date=dt.date(2023, 7, 1), end_date=dt.date(2023, 7, 31)
+            data, start_date=dt.date(2024, 7, 1), end_date=dt.date(2024, 7, 31)
         )
 
         assert len(filtered.entries) == 0
@@ -399,7 +402,7 @@ class TestAggregateWithDateRangeFiltering:
         entries = [
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 5, 30),
+                date=dt.date(2024, 5, 30),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -409,7 +412,7 @@ class TestAggregateWithDateRangeFiltering:
             ),
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 6, 15),
+                date=dt.date(2024, 6, 15),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -419,7 +422,7 @@ class TestAggregateWithDateRangeFiltering:
             ),
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 7, 10),
+                date=dt.date(2024, 7, 10),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -434,12 +437,12 @@ class TestAggregateWithDateRangeFiltering:
 
         # Aggregate with start date filter
         result = aggregator.aggregate_timesheets(
-            folder_id, start_date=dt.date(2023, 6, 1)
+            folder_id, start_date=dt.date(2024, 6, 1)
         )
 
         # Should only include June and July entries
         assert len(result.entries) == 2
-        assert all(e.date >= dt.date(2023, 6, 1) for e in result.entries)
+        assert all(e.date >= dt.date(2024, 6, 1) for e in result.entries)
         assert len(result.billing_results) == 2
 
     def test_aggregate_with_end_date_only(
@@ -459,7 +462,7 @@ class TestAggregateWithDateRangeFiltering:
         entries = [
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 5, 30),
+                date=dt.date(2024, 5, 30),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -469,7 +472,7 @@ class TestAggregateWithDateRangeFiltering:
             ),
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 6, 15),
+                date=dt.date(2024, 6, 15),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -484,12 +487,12 @@ class TestAggregateWithDateRangeFiltering:
 
         # Aggregate with end date filter
         result = aggregator.aggregate_timesheets(
-            folder_id, end_date=dt.date(2023, 5, 31)
+            folder_id, end_date=dt.date(2024, 5, 31)
         )
 
         # Should only include May entry
         assert len(result.entries) == 1
-        assert result.entries[0].date == dt.date(2023, 5, 30)
+        assert result.entries[0].date == dt.date(2024, 5, 30)
         assert len(result.billing_results) == 1
 
     def test_aggregate_with_date_range(
@@ -510,7 +513,7 @@ class TestAggregateWithDateRangeFiltering:
         entries = [
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 5, 30),
+                date=dt.date(2024, 5, 30),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -520,7 +523,7 @@ class TestAggregateWithDateRangeFiltering:
             ),
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 6, 1),
+                date=dt.date(2024, 6, 1),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -530,7 +533,7 @@ class TestAggregateWithDateRangeFiltering:
             ),
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 6, 30),
+                date=dt.date(2024, 6, 30),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -540,7 +543,7 @@ class TestAggregateWithDateRangeFiltering:
             ),
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 7, 1),
+                date=dt.date(2024, 7, 1),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -555,13 +558,13 @@ class TestAggregateWithDateRangeFiltering:
 
         # Aggregate for June only
         result = aggregator.aggregate_timesheets(
-            folder_id, start_date=dt.date(2023, 6, 1), end_date=dt.date(2023, 6, 30)
+            folder_id, start_date=dt.date(2024, 6, 1), end_date=dt.date(2024, 6, 30)
         )
 
         # Should only include June entries
         assert len(result.entries) == 2
         assert all(
-            dt.date(2023, 6, 1) <= e.date <= dt.date(2023, 6, 30)
+            dt.date(2024, 6, 1) <= e.date <= dt.date(2024, 6, 30)
             for e in result.entries
         )
         assert len(result.billing_results) == 2
@@ -583,7 +586,7 @@ class TestAggregateWithDateRangeFiltering:
         entries = [
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 6, 15),
+                date=dt.date(2024, 6, 15),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -593,7 +596,7 @@ class TestAggregateWithDateRangeFiltering:
             ),
             TimesheetEntry(
                 freelancer_name="Jane Smith",
-                date=dt.date(2023, 6, 15),
+                date=dt.date(2024, 6, 15),
                 project_code="PROJ-002",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -634,7 +637,7 @@ class TestAggregateWithDateRangeFiltering:
         entries = [
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 6, 15),
+                date=dt.date(2024, 6, 15),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -644,7 +647,7 @@ class TestAggregateWithDateRangeFiltering:
             ),
             TimesheetEntry(
                 freelancer_name="Jane Smith",
-                date=dt.date(2023, 6, 15),
+                date=dt.date(2024, 6, 15),
                 project_code="PROJ-002",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -686,7 +689,7 @@ class TestAggregateWithDateRangeFiltering:
         entries = [
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 5, 30),
+                date=dt.date(2024, 5, 30),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -696,7 +699,7 @@ class TestAggregateWithDateRangeFiltering:
             ),
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 6, 15),
+                date=dt.date(2024, 6, 15),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -706,7 +709,7 @@ class TestAggregateWithDateRangeFiltering:
             ),
             TimesheetEntry(
                 freelancer_name="Jane Smith",
-                date=dt.date(2023, 6, 20),
+                date=dt.date(2024, 6, 20),
                 project_code="PROJ-002",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -725,8 +728,8 @@ class TestAggregateWithDateRangeFiltering:
         # Aggregate with all filters
         result = aggregator.aggregate_timesheets(
             folder_id,
-            start_date=dt.date(2023, 6, 1),
-            end_date=dt.date(2023, 6, 30),
+            start_date=dt.date(2024, 6, 1),
+            end_date=dt.date(2024, 6, 30),
             project_code="PROJ-001",
             freelancer_name="John Doe",
         )
@@ -735,7 +738,7 @@ class TestAggregateWithDateRangeFiltering:
         assert len(result.entries) == 1
         assert result.entries[0].freelancer_name == "John Doe"
         assert result.entries[0].project_code == "PROJ-001"
-        assert result.entries[0].date == dt.date(2023, 6, 15)
+        assert result.entries[0].date == dt.date(2024, 6, 15)
         assert len(result.billing_results) == 1
 
     def test_aggregate_with_filters_no_matches(
@@ -755,7 +758,7 @@ class TestAggregateWithDateRangeFiltering:
         entries = [
             TimesheetEntry(
                 freelancer_name="John Doe",
-                date=dt.date(2023, 6, 15),
+                date=dt.date(2024, 6, 15),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -770,7 +773,7 @@ class TestAggregateWithDateRangeFiltering:
 
         # Filter for different month
         result = aggregator.aggregate_timesheets(
-            folder_id, start_date=dt.date(2023, 7, 1), end_date=dt.date(2023, 7, 31)
+            folder_id, start_date=dt.date(2024, 7, 1), end_date=dt.date(2024, 7, 31)
         )
 
         # Should return empty data
@@ -799,11 +802,11 @@ class TestPerformanceOptimization:
         ]
         mock_drive_service.list_files_in_folder.return_value = files
 
-        # Each timesheet returns 10 entries
+        # Each timesheet returns 10 entries (using 2024 date for default filter)
         mock_entries = [
             TimesheetEntry(
                 freelancer_name=f"Freelancer {i}",
-                date=dt.date(2023, 6, 15),
+                date=dt.date(2024, 6, 15),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -867,8 +870,8 @@ class TestAggregatedTimesheetData:
                 freelancer_name="John Doe",
                 project_code="PROJ-001",
                 location="Berlin",
-                start_date=dt.date(2023, 6, 15),
-                end_date=dt.date(2023, 6, 16),
+                start_date=dt.date(2024, 6, 15),
+                end_date=dt.date(2024, 6, 16),
             )
         ]
 
