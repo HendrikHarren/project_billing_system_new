@@ -62,8 +62,12 @@ def validate_data(file_id: Optional[str], month: Optional[str], severity: str):
         # Initialize services
         settings = get_config()
         credentials = settings.get_google_service_account_info()
-        sheets_service = GoogleSheetsService(credentials=credentials)
-        drive_service = GoogleDriveService(credentials=credentials)
+        sheets_service = GoogleSheetsService(
+            credentials=credentials, subject_email=settings.google_subject_email
+        )
+        drive_service = GoogleDriveService(
+            credentials=credentials, subject_email=settings.google_subject_email
+        )
         reader = TimesheetReader(sheets_service)
         validator = TimesheetValidator()
 

@@ -32,10 +32,26 @@ class TestTimesheetReader:
 
     @pytest.fixture
     def sample_timesheet_data(self):
-        """Sample timesheet data from Google Sheets."""
+        """Sample timesheet data from Google Sheets.
+
+        Note: First row is example row (row 2 in actual sheet) that gets skipped.
+        """
         return pd.DataFrame(
             [
                 {
+                    # Row 2 (example row) - this will be skipped by the reader
+                    "Date": "2023-01-01",
+                    "Project": "EXAMPLE",
+                    "Location": "On-site",
+                    "Start Time": "09:00",
+                    "End Time": "17:00",
+                    "Topics worked on": "Example",
+                    "Break": "00:30",
+                    "Travel time": "00:00",
+                    "Sum": "07:30",
+                },
+                {
+                    # Row 3 (actual data)
                     "Date": "2023-06-15",
                     "Project": "PROJ-001",
                     "Location": "On-site",
@@ -47,6 +63,7 @@ class TestTimesheetReader:
                     "Sum": "08:30",
                 },
                 {
+                    # Row 4 (actual data)
                     "Date": "2023-06-16",
                     "Project": "PROJ-002",
                     "Location": "Off-site",
@@ -330,10 +347,22 @@ class TestTimesheetReader:
         """Test reading timesheet skips invalid rows."""
         spreadsheet_id = "test-spreadsheet-id"
 
-        # Mix of valid and invalid data
+        # Mix of valid and invalid data (first row is example that gets skipped)
         data = pd.DataFrame(
             [
                 {
+                    # Row 2 (example row) - will be skipped
+                    "Date": "2023-01-01",
+                    "Project": "EXAMPLE",
+                    "Location": "On-site",
+                    "Start Time": "09:00",
+                    "End Time": "17:00",
+                    "Topics worked on": "Example",
+                    "Break": "00:30",
+                    "Travel time": "00:00",
+                },
+                {
+                    # Row 3 (actual data - valid)
                     "Date": "2023-06-15",
                     "Project": "PROJ-001",
                     "Location": "On-site",
@@ -344,7 +373,8 @@ class TestTimesheetReader:
                     "Travel time": "00:00",
                 },
                 {
-                    "Date": "",  # Empty date - should be skipped
+                    # Row 4 (invalid - empty date, should be skipped)
+                    "Date": "",
                     "Project": "PROJ-002",
                     "Location": "On-site",
                     "Start Time": "09:00",
@@ -354,6 +384,7 @@ class TestTimesheetReader:
                     "Travel time": "00:00",
                 },
                 {
+                    # Row 5 (actual data - valid)
                     "Date": "2023-06-17",
                     "Project": "PROJ-003",
                     "Location": "Off-site",
@@ -382,10 +413,23 @@ class TestTimesheetReader:
         """Test reading timesheet handles extra columns gracefully."""
         spreadsheet_id = "test-spreadsheet-id"
 
-        # Data with extra column
+        # Data with extra column (row 1 is example, row 2 is actual data)
         data = pd.DataFrame(
             [
                 {
+                    # Row 2 (example row) - will be skipped
+                    "Date": "2023-01-01",
+                    "Project": "EXAMPLE",
+                    "Location": "On-site",
+                    "Start Time": "09:00",
+                    "End Time": "17:00",
+                    "Topics worked on": "Example",
+                    "Break": "00:30",
+                    "Travel time": "00:00",
+                    "Extra Column": "Example",
+                },
+                {
+                    # Row 3 (actual data)
                     "Date": "2023-06-15",
                     "Project": "PROJ-001",
                     "Location": "On-site",
@@ -395,7 +439,7 @@ class TestTimesheetReader:
                     "Break": "00:30",
                     "Travel time": "00:00",
                     "Extra Column": "Extra data",  # Extra column should be ignored
-                }
+                },
             ]
         )
 
@@ -418,11 +462,11 @@ class TestTimesheetReader:
 
         timesheet_reader.read_timesheet(spreadsheet_id)
 
-        # Verify it reads from row 3 onwards (skipping header and example)
+        # Verify it reads from row 1 (includes headers, skips row 2 in code)
         call_args = mock_sheets_service.read_sheet.call_args
         assert (
-            "Timesheet!A3:I" in call_args[0]
-            or call_args[1].get("range_name") == "Timesheet!A3:I"
+            "Timesheet!A1:I" in call_args[0]
+            or call_args[1].get("range_name") == "Timesheet!A1:I"
         )
 
     def test_parse_row_whitespace_handling(self, timesheet_reader):

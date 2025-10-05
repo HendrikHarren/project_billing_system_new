@@ -40,11 +40,14 @@ def mock_drive_service():
 
 @pytest.fixture
 def sample_timesheet_entries() -> List[TimesheetEntry]:
-    """Create sample timesheet entries for testing."""
+    """Create sample timesheet entries for testing.
+
+    Uses dates from 2024 (previous year) to work with default filter.
+    """
     return [
         TimesheetEntry(
             freelancer_name="John Doe",
-            date=dt.date(2023, 6, 15),
+            date=dt.date(2024, 6, 15),
             project_code="PROJ-001",
             start_time=dt.time(9, 0),
             end_time=dt.time(17, 0),
@@ -54,7 +57,7 @@ def sample_timesheet_entries() -> List[TimesheetEntry]:
         ),
         TimesheetEntry(
             freelancer_name="John Doe",
-            date=dt.date(2023, 6, 16),
+            date=dt.date(2024, 6, 16),
             project_code="PROJ-001",
             start_time=dt.time(9, 0),
             end_time=dt.time(17, 0),
@@ -64,7 +67,7 @@ def sample_timesheet_entries() -> List[TimesheetEntry]:
         ),
         TimesheetEntry(
             freelancer_name="Jane Smith",
-            date=dt.date(2023, 6, 15),
+            date=dt.date(2024, 6, 15),
             project_code="PROJ-002",
             start_time=dt.time(10, 0),
             end_time=dt.time(18, 0),
@@ -265,16 +268,16 @@ class TestFilterByDateRange:
         terms_map = {("John Doe", "PROJ-001"): sample_project_terms[0]}
         mock_project_terms_reader.get_all_project_terms.return_value = terms_map
 
-        # Aggregate first
+        # Aggregate first (uses default date filter)
         data = aggregator.aggregate_timesheets(folder_id)
 
         # Filter to only June 15
         filtered = aggregator.filter_by_date_range(
-            data, start_date=dt.date(2023, 6, 15), end_date=dt.date(2023, 6, 15)
+            data, start_date=dt.date(2024, 6, 15), end_date=dt.date(2024, 6, 15)
         )
 
         assert len(filtered.entries) == 1
-        assert filtered.entries[0].date == dt.date(2023, 6, 15)
+        assert filtered.entries[0].date == dt.date(2024, 6, 15)
 
     def test_filter_by_date_range_no_matches(
         self,
@@ -296,9 +299,9 @@ class TestFilterByDateRange:
 
         data = aggregator.aggregate_timesheets(folder_id)
 
-        # Filter to different date range
+        # Filter to different date range (outside the data range)
         filtered = aggregator.filter_by_date_range(
-            data, start_date=dt.date(2023, 7, 1), end_date=dt.date(2023, 7, 31)
+            data, start_date=dt.date(2024, 7, 1), end_date=dt.date(2024, 7, 31)
         )
 
         assert len(filtered.entries) == 0
@@ -378,6 +381,407 @@ class TestFilterByFreelancer:
         assert all(e.freelancer_name == "John Doe" for e in filtered.entries)
 
 
+class TestAggregateWithDateRangeFiltering:
+    """Test filtering during aggregation for performance optimization."""
+
+    def test_aggregate_with_start_date_only(
+        self,
+        aggregator,
+        mock_drive_service,
+        mock_timesheet_reader,
+        mock_project_terms_reader,
+        sample_project_terms,
+    ):
+        """Test aggregation with only start date filter."""
+        folder_id = "test-folder"
+        mock_drive_service.list_files_in_folder.return_value = [
+            {"id": "file1", "name": "Timesheet"}
+        ]
+
+        # Create entries spanning multiple months
+        entries = [
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 5, 30),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 6, 15),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 7, 10),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+        ]
+        mock_timesheet_reader.read_timesheet.return_value = entries
+        terms_map = {("John Doe", "PROJ-001"): sample_project_terms[0]}
+        mock_project_terms_reader.get_all_project_terms.return_value = terms_map
+
+        # Aggregate with start date filter
+        result = aggregator.aggregate_timesheets(
+            folder_id, start_date=dt.date(2024, 6, 1)
+        )
+
+        # Should only include June and July entries
+        assert len(result.entries) == 2
+        assert all(e.date >= dt.date(2024, 6, 1) for e in result.entries)
+        assert len(result.billing_results) == 2
+
+    def test_aggregate_with_end_date_only(
+        self,
+        aggregator,
+        mock_drive_service,
+        mock_timesheet_reader,
+        mock_project_terms_reader,
+        sample_project_terms,
+    ):
+        """Test aggregation with only end date filter."""
+        folder_id = "test-folder"
+        mock_drive_service.list_files_in_folder.return_value = [
+            {"id": "file1", "name": "Timesheet"}
+        ]
+
+        entries = [
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 5, 30),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 6, 15),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+        ]
+        mock_timesheet_reader.read_timesheet.return_value = entries
+        terms_map = {("John Doe", "PROJ-001"): sample_project_terms[0]}
+        mock_project_terms_reader.get_all_project_terms.return_value = terms_map
+
+        # Aggregate with end date filter
+        result = aggregator.aggregate_timesheets(
+            folder_id, end_date=dt.date(2024, 5, 31)
+        )
+
+        # Should only include May entry
+        assert len(result.entries) == 1
+        assert result.entries[0].date == dt.date(2024, 5, 30)
+        assert len(result.billing_results) == 1
+
+    def test_aggregate_with_date_range(
+        self,
+        aggregator,
+        mock_drive_service,
+        mock_timesheet_reader,
+        mock_project_terms_reader,
+        sample_project_terms,
+    ):
+        """Test aggregation with both start and end date filters."""
+        folder_id = "test-folder"
+        mock_drive_service.list_files_in_folder.return_value = [
+            {"id": "file1", "name": "Timesheet"}
+        ]
+
+        # Entries spanning 3 months
+        entries = [
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 5, 30),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 6, 1),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 6, 30),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 7, 1),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+        ]
+        mock_timesheet_reader.read_timesheet.return_value = entries
+        terms_map = {("John Doe", "PROJ-001"): sample_project_terms[0]}
+        mock_project_terms_reader.get_all_project_terms.return_value = terms_map
+
+        # Aggregate for June only
+        result = aggregator.aggregate_timesheets(
+            folder_id, start_date=dt.date(2024, 6, 1), end_date=dt.date(2024, 6, 30)
+        )
+
+        # Should only include June entries
+        assert len(result.entries) == 2
+        assert all(
+            dt.date(2024, 6, 1) <= e.date <= dt.date(2024, 6, 30)
+            for e in result.entries
+        )
+        assert len(result.billing_results) == 2
+
+    def test_aggregate_with_project_filter(
+        self,
+        aggregator,
+        mock_drive_service,
+        mock_timesheet_reader,
+        mock_project_terms_reader,
+        sample_project_terms,
+    ):
+        """Test aggregation with project code filter."""
+        folder_id = "test-folder"
+        mock_drive_service.list_files_in_folder.return_value = [
+            {"id": "file1", "name": "Timesheet"}
+        ]
+
+        entries = [
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 6, 15),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+            TimesheetEntry(
+                freelancer_name="Jane Smith",
+                date=dt.date(2024, 6, 15),
+                project_code="PROJ-002",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+        ]
+        mock_timesheet_reader.read_timesheet.return_value = entries
+        terms_map = {
+            ("John Doe", "PROJ-001"): sample_project_terms[0],
+            ("Jane Smith", "PROJ-002"): sample_project_terms[1],
+        }
+        mock_project_terms_reader.get_all_project_terms.return_value = terms_map
+
+        # Aggregate with project filter
+        result = aggregator.aggregate_timesheets(folder_id, project_code="PROJ-001")
+
+        # Should only include PROJ-001
+        assert len(result.entries) == 1
+        assert result.entries[0].project_code == "PROJ-001"
+        assert len(result.billing_results) == 1
+
+    def test_aggregate_with_freelancer_filter(
+        self,
+        aggregator,
+        mock_drive_service,
+        mock_timesheet_reader,
+        mock_project_terms_reader,
+        sample_project_terms,
+    ):
+        """Test aggregation with freelancer name filter."""
+        folder_id = "test-folder"
+        mock_drive_service.list_files_in_folder.return_value = [
+            {"id": "file1", "name": "Timesheet"}
+        ]
+
+        entries = [
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 6, 15),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+            TimesheetEntry(
+                freelancer_name="Jane Smith",
+                date=dt.date(2024, 6, 15),
+                project_code="PROJ-002",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+        ]
+        mock_timesheet_reader.read_timesheet.return_value = entries
+        terms_map = {
+            ("John Doe", "PROJ-001"): sample_project_terms[0],
+            ("Jane Smith", "PROJ-002"): sample_project_terms[1],
+        }
+        mock_project_terms_reader.get_all_project_terms.return_value = terms_map
+
+        # Aggregate with freelancer filter
+        result = aggregator.aggregate_timesheets(folder_id, freelancer_name="John Doe")
+
+        # Should only include John Doe
+        assert len(result.entries) == 1
+        assert result.entries[0].freelancer_name == "John Doe"
+        assert len(result.billing_results) == 1
+
+    def test_aggregate_with_combined_filters(
+        self,
+        aggregator,
+        mock_drive_service,
+        mock_timesheet_reader,
+        mock_project_terms_reader,
+        sample_project_terms,
+    ):
+        """Test aggregation with multiple filters combined."""
+        folder_id = "test-folder"
+        mock_drive_service.list_files_in_folder.return_value = [
+            {"id": "file1", "name": "Timesheet"}
+        ]
+
+        # Create diverse set of entries
+        entries = [
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 5, 30),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 6, 15),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+            TimesheetEntry(
+                freelancer_name="Jane Smith",
+                date=dt.date(2024, 6, 20),
+                project_code="PROJ-002",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+        ]
+        mock_timesheet_reader.read_timesheet.return_value = entries
+        terms_map = {
+            ("John Doe", "PROJ-001"): sample_project_terms[0],
+            ("Jane Smith", "PROJ-002"): sample_project_terms[1],
+        }
+        mock_project_terms_reader.get_all_project_terms.return_value = terms_map
+
+        # Aggregate with all filters
+        result = aggregator.aggregate_timesheets(
+            folder_id,
+            start_date=dt.date(2024, 6, 1),
+            end_date=dt.date(2024, 6, 30),
+            project_code="PROJ-001",
+            freelancer_name="John Doe",
+        )
+
+        # Should only include John Doe's June PROJ-001 entry
+        assert len(result.entries) == 1
+        assert result.entries[0].freelancer_name == "John Doe"
+        assert result.entries[0].project_code == "PROJ-001"
+        assert result.entries[0].date == dt.date(2024, 6, 15)
+        assert len(result.billing_results) == 1
+
+    def test_aggregate_with_filters_no_matches(
+        self,
+        aggregator,
+        mock_drive_service,
+        mock_timesheet_reader,
+        mock_project_terms_reader,
+        sample_project_terms,
+    ):
+        """Test aggregation when filters result in no matches."""
+        folder_id = "test-folder"
+        mock_drive_service.list_files_in_folder.return_value = [
+            {"id": "file1", "name": "Timesheet"}
+        ]
+
+        entries = [
+            TimesheetEntry(
+                freelancer_name="John Doe",
+                date=dt.date(2024, 6, 15),
+                project_code="PROJ-001",
+                start_time=dt.time(9, 0),
+                end_time=dt.time(17, 0),
+                break_minutes=30,
+                travel_time_minutes=0,
+                location="remote",
+            ),
+        ]
+        mock_timesheet_reader.read_timesheet.return_value = entries
+        terms_map = {("John Doe", "PROJ-001"): sample_project_terms[0]}
+        mock_project_terms_reader.get_all_project_terms.return_value = terms_map
+
+        # Filter for different month
+        result = aggregator.aggregate_timesheets(
+            folder_id, start_date=dt.date(2024, 7, 1), end_date=dt.date(2024, 7, 31)
+        )
+
+        # Should return empty data
+        assert len(result.entries) == 0
+        assert len(result.billing_results) == 0
+        assert len(result.trips) == 0
+
+
 class TestPerformanceOptimization:
     """Test performance optimizations for large datasets."""
 
@@ -398,11 +802,11 @@ class TestPerformanceOptimization:
         ]
         mock_drive_service.list_files_in_folder.return_value = files
 
-        # Each timesheet returns 10 entries
+        # Each timesheet returns 10 entries (using 2024 date for default filter)
         mock_entries = [
             TimesheetEntry(
                 freelancer_name=f"Freelancer {i}",
-                date=dt.date(2023, 6, 15),
+                date=dt.date(2024, 6, 15),
                 project_code="PROJ-001",
                 start_time=dt.time(9, 0),
                 end_time=dt.time(17, 0),
@@ -466,8 +870,8 @@ class TestAggregatedTimesheetData:
                 freelancer_name="John Doe",
                 project_code="PROJ-001",
                 location="Berlin",
-                start_date=dt.date(2023, 6, 15),
-                end_date=dt.date(2023, 6, 16),
+                start_date=dt.date(2024, 6, 15),
+                end_date=dt.date(2024, 6, 16),
             )
         ]
 

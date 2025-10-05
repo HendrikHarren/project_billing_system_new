@@ -105,8 +105,9 @@ class TimesheetReader:
                 f"from spreadsheet {spreadsheet_id}"
             )
 
-            # Read data starting from row 3 (skip header and example)
-            range_name = f"{sheet_name}!A{start_row}:I"
+            # Read data starting from row 1 to get headers, then data from row 3+
+            # Row 1: Headers, Row 2: Example (skipped), Row 3+: Actual data
+            range_name = f"{sheet_name}!A1:I"
 
             # Use cache service if available, otherwise direct read
             if self.cache_service:
@@ -117,6 +118,11 @@ class TimesheetReader:
             if df.empty:
                 logger.info(f"No data found in {spreadsheet_id}")
                 return []
+
+            # Skip the example row (row 2 in sheet, index 0 after headers)
+            # read_sheet uses row 1 as headers, so index 0 is row 2
+            if len(df) > 0:
+                df = df.iloc[1:]  # Skip row 2 (example row)
 
             # Parse each row into TimesheetEntry objects
             entries = []
@@ -257,6 +263,7 @@ class TimesheetReader:
         """Parse date string in multiple formats.
 
         Supports:
+        - Excel serial number: 43496 (days since 1899-12-30)
         - ISO format: YYYY-MM-DD
         - European format: DD.MM.YYYY
         - US format: MM/DD/YYYY
@@ -271,6 +278,24 @@ class TimesheetReader:
             ValueError: If date format is not recognized or invalid
         """
         date_str = date_str.strip()
+
+        # Try to parse as Excel serial number (numeric value)
+        try:
+            # Check if it's a numeric value (int or float)
+            numeric_value = float(date_str)
+
+            # Excel serial numbers are typically in range 1-50000+
+            # (corresponds to dates from 1900 to well into the future)
+            if 1 <= numeric_value <= 100000:
+                # Excel epoch: December 30, 1899
+                excel_epoch = dt.date(1899, 12, 30)
+                days = int(numeric_value)
+                parsed_date = excel_epoch + dt.timedelta(days=days)
+                logger.debug(f"Parsed Excel serial {date_str} as {parsed_date}")
+                return parsed_date
+        except (ValueError, TypeError):
+            # Not a numeric value, continue to string format parsing
+            pass
 
         # Try different date formats
         formats = [
@@ -288,10 +313,10 @@ class TimesheetReader:
         raise ValueError(f"Invalid date format: {date_str}")
 
     def _parse_time(self, time_str: str) -> dt.time:
-        """Parse time string in HH:MM or H:MM format.
+        """Parse time string in HH:MM, H:MM, or Excel decimal format.
 
         Args:
-            time_str: Time string to parse (e.g., "09:30" or "9:30")
+            time_str: Time string to parse (e.g., "09:30", "9:30", or "0.395833")
 
         Returns:
             Parsed time object
@@ -300,6 +325,23 @@ class TimesheetReader:
             ValueError: If time format is invalid
         """
         time_str = time_str.strip()
+
+        # Try to parse as Excel time serial (decimal fraction of a day)
+        try:
+            decimal_value = float(time_str)
+            # Excel times are fractions of a day (0.0 to 1.0)
+            if 0.0 <= decimal_value < 1.0:
+                # Convert fraction of day to total minutes
+                total_minutes = int(decimal_value * 24 * 60)
+                hours = total_minutes // 60
+                minutes = total_minutes % 60
+                logger.debug(
+                    f"Parsed Excel time {time_str} as {hours:02d}:{minutes:02d}"
+                )
+                return dt.time(hours, minutes)
+        except (ValueError, TypeError):
+            # Not a decimal value, continue to string format parsing
+            pass
 
         # Handle both HH:MM and H:MM formats
         match = re.match(r"^(\d{1,2}):(\d{2})$", time_str)
