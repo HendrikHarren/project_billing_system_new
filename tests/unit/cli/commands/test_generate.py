@@ -33,11 +33,18 @@ class TestGenerateReportCommand:
                 "writer": mock_writer,
             }
 
-    def test_generate_report_requires_month(self, runner):
-        """Test that month parameter is required."""
-        result = runner.invoke(generate_report, [])
-        assert result.exit_code != 0
-        assert "month" in result.output.lower() or "required" in result.output.lower()
+    def test_generate_report_uses_defaults_without_month(self, runner):
+        """Test that command uses default date range when month not provided."""
+        with patch("src.cli.commands.generate.get_config"), patch(
+            "src.cli.commands.generate.GoogleDriveService"
+        ), patch("src.cli.commands.generate.TimesheetAggregator"), patch(
+            "src.cli.commands.generate.MasterTimesheetGenerator"
+        ), patch(
+            "src.cli.commands.generate.GoogleSheetsWriter"
+        ):
+            result = runner.invoke(generate_report, [])
+            # Should use default date range (current + previous year)
+            assert "default" in result.output.lower() or "2024" in result.output
 
     def test_generate_report_validates_month_format(self, runner):
         """Test that month format is validated."""

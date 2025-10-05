@@ -22,9 +22,13 @@ from src.writers.master_timesheet_generator import MasterTimesheetGenerator
 @click.command(name="generate-report")
 @click.option(
     "--month",
-    required=True,
+    required=False,
     type=str,
-    help="Month to generate report for (YYYY-MM format)",
+    default=None,
+    help=(
+        "Month to generate report for (YYYY-MM format). "
+        "If not specified, uses current + previous year."
+    ),
 )
 @click.option(
     "--project",
@@ -45,49 +49,70 @@ from src.writers.master_timesheet_generator import MasterTimesheetGenerator
     help="Google Drive folder ID for output (optional, uses default from config)",
 )
 def generate_report(
-    month: str,
+    month: Optional[str],
     project: Optional[str],
     freelancer: Optional[str],
     output_folder: Optional[str],
 ):
-    """Generate billing report for specified month.
+    """Generate billing report for specified month or date range.
 
     This command orchestrates the full pipeline:
     1. Read timesheets from Google Drive
-    2. Filter entries by date range (derived from month)
+    2. Filter entries by date range (from month, or defaults to current + previous year)
     3. Apply optional project and freelancer filters
     4. Calculate billing for filtered entries only (performance optimization)
     5. Generate master timesheet
     6. Write to Google Sheets with pivot table filters
 
-    The month parameter is converted to a date range (first to last day of month)
-    and used to filter entries before billing calculation, improving performance
-    for large datasets.
+    If month is specified, it's converted to a date range (first to last day of month).
+    If month is not specified, uses default filter (current year + previous year).
 
     Example:
         billing-cli generate-report --month 2024-10
         billing-cli generate-report --month 2024-10 --project PROJ001
-        billing-cli generate-report --month 2024-10 --freelancer "John Doe"
+        billing-cli generate-report  # Uses default date range (2024-2025)
     """
     start_time = time.time()
 
     try:
-        # Validate month format and calculate date range
-        try:
-            month_date = dt.datetime.strptime(month, "%Y-%m")
-            year = month_date.year
-            month_num = month_date.month
+        # Handle month parameter - can be None
+        if month is not None:
+            # Validate month format and calculate date range
+            try:
+                month_date = dt.datetime.strptime(month, "%Y-%m")
+                year = month_date.year
+                month_num = month_date.month
 
-            # Calculate first and last day of the month
-            start_date = dt.date(year, month_num, 1)
-            _, last_day = monthrange(year, month_num)
-            end_date = dt.date(year, month_num, last_day)
-        except ValueError:
-            click.echo(format_error(f"Invalid month format: {month}. Expected YYYY-MM"))
-            raise click.Abort()
+                # Calculate first and last day of the month
+                start_date = dt.date(year, month_num, 1)
+                _, last_day = monthrange(year, month_num)
+                end_date = dt.date(year, month_num, last_day)
+                filename_prefix = f"Billing_Report_{month}"
+            except ValueError:
+                click.echo(
+                    format_error(f"Invalid month format: {month}. Expected YYYY-MM")
+                )
+                raise click.Abort()
 
-        click.echo(format_info(f"Generating report for {month}..."))
-        click.echo(format_info(f"  Date range: {start_date} to {end_date}"))
+            click.echo(format_info(f"Generating report for {month}..."))
+            click.echo(format_info(f"  Date range: {start_date} to {end_date}"))
+        else:
+            # Use defaults (current + previous year)
+            start_date = None
+            end_date = None
+            year = None
+            month_num = None
+            today = dt.date.today()
+            current_year = today.year
+            filename_prefix = f"Billing_Report_{current_year - 1}-{current_year}"
+
+            click.echo(format_info("Generating report with default date range..."))
+            date_range_text = (
+                f"  Date range: {current_year - 1}-01-01 to "
+                f"{current_year}-12-31 (default)"
+            )
+            click.echo(format_info(date_range_text))
+
         if project:
             click.echo(format_info(f"  Filter: Project = {project}"))
         if freelancer:
@@ -147,7 +172,7 @@ def generate_report(
         file_id, url = writer.write_master_timesheet(
             master_data=master_data,
             output_folder_id=folder_id,
-            filename_prefix=f"Billing_Report_{month}",
+            filename_prefix=filename_prefix,
             project_filter=project,
             year_filter=year,
             month_filter=month_num,
