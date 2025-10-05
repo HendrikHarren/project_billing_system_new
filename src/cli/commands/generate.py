@@ -93,8 +93,9 @@ def generate_report(
         # Stage 1: Initialize services
         click.echo(tracker.get_current_message())
         settings = get_config()
-        sheets_service = GoogleSheetsService()
-        drive_service = GoogleDriveService()
+        credentials = settings.get_google_service_account_info()
+        sheets_service = GoogleSheetsService(credentials=credentials)
+        drive_service = GoogleDriveService(credentials=credentials)
         timesheet_reader = TimesheetReader(sheets_service)
         project_terms_reader = ProjectTermsReader(
             sheets_service, settings.project_terms_file_id

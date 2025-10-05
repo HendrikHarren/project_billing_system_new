@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 import google.auth
 import pandas as pd
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -17,10 +18,10 @@ logger = logging.getLogger(__name__)
 
 class GoogleSheetsService:
     """
-    Google Sheets service with Application Default Credentials and retry handling.
+    Google Sheets service with flexible authentication and retry handling.
 
     Features:
-    - Application Default Credentials (ADC) for authentication
+    - Service account credentials (from .env) or Application Default Credentials (ADC)
     - Automatic retry with exponential backoff
     - Batch operations for efficiency
     - Pandas DataFrame integration
@@ -29,6 +30,7 @@ class GoogleSheetsService:
 
     def __init__(
         self,
+        credentials: Optional[Dict[str, Any]] = None,
         retry_handler: Optional[RetryHandler] = None,
         scopes: Optional[List[str]] = None,
     ):
@@ -36,9 +38,13 @@ class GoogleSheetsService:
         Initialize Google Sheets service.
 
         Args:
+            credentials: Service account credentials dict from
+                        config.get_google_service_account_info().
+                        If None, falls back to ADC (Application Default Credentials)
             retry_handler: Custom retry handler instance
             scopes: Custom OAuth scopes for authentication
         """
+        self.credentials_info = credentials
         self.retry_handler = retry_handler or RetryHandler()
         self.scopes = scopes or ["https://www.googleapis.com/auth/spreadsheets"]
 
@@ -47,16 +53,30 @@ class GoogleSheetsService:
 
     def _create_service(self):
         """
-        Create Google Sheets API service using Application Default Credentials.
+        Create Google Sheets API service using service account or ADC.
 
         Returns:
             Google Sheets API service instance
         """
         try:
-            credentials, project = google.auth.default(scopes=self.scopes)
-            service = build("sheets", "v4", credentials=credentials)
+            if self.credentials_info:
+                # Use service account credentials from config
+                credentials = service_account.Credentials.from_service_account_info(
+                    self.credentials_info, scopes=self.scopes
+                )
+                project = self.credentials_info.get("project_id", "unknown")
+                logger.info(
+                    f"Google Sheets service initialized with service account "
+                    f"for project: {project}"
+                )
+            else:
+                # Fall back to Application Default Credentials (ADC)
+                credentials, project = google.auth.default(scopes=self.scopes)
+                logger.info(
+                    f"Google Sheets service initialized with ADC for project: {project}"
+                )
 
-            logger.info(f"Google Sheets service initialized for project: {project}")
+            service = build("sheets", "v4", credentials=credentials)
             return service
 
         except Exception as e:
