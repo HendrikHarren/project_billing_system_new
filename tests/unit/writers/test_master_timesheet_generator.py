@@ -316,19 +316,16 @@ class TestMasterTimesheetGenerator:
             )
             large_billing.append(
                 BillingResult(
+                    billable_hours=Decimal("7.0"),
                     work_hours=Decimal("8.0"),
                     break_hours=Decimal("1.0"),
                     travel_hours=Decimal("0.0"),
-                    total_hours=Decimal("7.0"),
-                    hourly_rate=Decimal("150.00"),
-                    cost_per_hour=Decimal("100.00"),
-                    revenue=Decimal("1050.00"),
-                    cost=Decimal("700.00"),
+                    hours_billed=Decimal("1050.00"),
+                    travel_surcharge=Decimal("0.0"),
+                    total_billed=Decimal("1050.00"),
+                    total_cost=Decimal("700.00"),
                     profit=Decimal("350.00"),
-                    profit_margin=Decimal("33.33"),
-                    travel_surcharge_hours=Decimal("0.0"),
-                    travel_surcharge_revenue=Decimal("0.0"),
-                    travel_surcharge_cost=Decimal("0.0"),
+                    profit_margin_percentage=Decimal("33.33"),
                 )
             )
 
