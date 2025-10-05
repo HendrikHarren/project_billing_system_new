@@ -7,12 +7,17 @@ terms and trip reimbursement rules from Google Sheets.
 import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple
+
+# Import TYPE_CHECKING to avoid circular imports
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from pydantic import ValidationError
 
 from src.models.project import ProjectTerms
 from src.services.google_sheets_service import GoogleSheetsService
+
+if TYPE_CHECKING:
+    from src.services.sheets_cache_service import SheetsCacheService
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +50,7 @@ class ProjectTermsReader:
         sheets_service: Google Sheets service for data access
         spreadsheet_id: The ID of the spreadsheet containing terms
         cache_ttl: Cache time-to-live in seconds (default: 3600 = 1 hour)
+        cache_service: Optional modification-time-based cache service
 
     Example:
         >>> from src.services.google_sheets_service import GoogleSheetsService
@@ -60,6 +66,7 @@ class ProjectTermsReader:
         sheets_service: GoogleSheetsService,
         spreadsheet_id: str,
         cache_ttl: int = 3600,
+        cache_service: Optional["SheetsCacheService"] = None,
     ):
         """Initialize the project terms reader.
 
@@ -67,12 +74,15 @@ class ProjectTermsReader:
             sheets_service: Google Sheets service instance for data access
             spreadsheet_id: The ID of the spreadsheet containing project terms
             cache_ttl: Cache time-to-live in seconds (default: 3600 = 1 hour)
+            cache_service: Optional modification-time-based cache service
         """
         self.sheets_service = sheets_service
         self.spreadsheet_id = spreadsheet_id
         self.cache_ttl = cache_ttl
+        self.cache_service = cache_service
 
-        # Cache storage
+        # Cache storage (in-memory TTL-based cache,
+        # used when cache_service not available)
         self._cache: Dict[Tuple[str, str], ProjectTerms] = {}
         self._trip_terms_cache: Optional[List[Dict[str, Any]]] = None
         self._cache_timestamp: Optional[datetime] = None
@@ -193,7 +203,14 @@ class ProjectTermsReader:
         try:
             # Read data from sheet (assuming headers in row 1, data starts row 2)
             range_name = f"{sheet_name}!A2:F"
-            df = self.sheets_service.read_sheet(self.spreadsheet_id, range_name)
+
+            # Use cache service if available, otherwise direct read
+            if self.cache_service:
+                df = self.cache_service.read_sheet_cached(
+                    self.spreadsheet_id, range_name
+                )
+            else:
+                df = self.sheets_service.read_sheet(self.spreadsheet_id, range_name)
 
             if df.empty:
                 logger.warning(f"No project terms data found in {sheet_name}")
@@ -224,7 +241,14 @@ class ProjectTermsReader:
         try:
             # Read data from sheet
             range_name = f"{sheet_name}!A2:D"
-            df = self.sheets_service.read_sheet(self.spreadsheet_id, range_name)
+
+            # Use cache service if available, otherwise direct read
+            if self.cache_service:
+                df = self.cache_service.read_sheet_cached(
+                    self.spreadsheet_id, range_name
+                )
+            else:
+                df = self.sheets_service.read_sheet(self.spreadsheet_id, range_name)
 
             if df.empty:
                 logger.warning(f"No trip terms data found in {sheet_name}")

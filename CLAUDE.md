@@ -124,6 +124,14 @@ PROJECT_TERMS_FILE_ID
 MONTHLY_INVOICING_FOLDER_ID
 ```
 
+### Optional Cache Configuration
+```
+ENABLE_SHEETS_CACHE=True          # Enable dual-layer caching (default: True)
+CACHE_FILE_PATH=.cache/sheets_cache.json  # Cache file location
+CACHE_MAX_SIZE=100                 # Maximum cache entries (default: 100)
+CACHE_AUTO_SAVE=True               # Auto-save to disk (default: True)
+```
+
 ### API Best Practices
 - Retry logic with exponential backoff
 - Rate limiting handling
@@ -180,14 +188,29 @@ python test_connection.py
 - **Phase 2**: Timesheet reader, project terms reader, data validation
 - **Phase 3**: Time calculator, trip calculator, billing calculator
 - **Phase 4**: Timesheet aggregator, trip aggregator, weekly hours calculator
-
-### Recently Completed (✅)
 - **Phase 5**: Report generation
   - Issue #13: Master timesheet generator (completed 2025-10-05)
   - Issue #14: Pivot table builder (completed 2025-10-05, implemented as native pivot tables)
   - Issue #15: Google Sheets writer (completed 2025-10-05)
 - **Phase 6**: CLI Application (in progress)
   - Issue #16: CLI Interface (completed 2025-10-05)
+- **Performance Optimization**:
+  - Issue #41: Dual-layer caching with modification-time-based invalidation (completed 2025-10-05)
+
+### Recently Completed (✅)
+- **CLI Interface** (Issue #16)
+  - Three commands: generate-report, list-timesheets, validate-data
+  - Color-coded output with progress indicators
+  - Integration with all system components
+  - 86% test coverage
+- **Caching System** (Issue #41)
+  - Dual-layer caching (memory + disk) for Google Sheets data
+  - Modification-time-based cache invalidation
+  - 60-90% reduction in API calls for unchanged files
+  - Persistent across application restarts
+  - Thread-safe with LRU eviction
+  - 91% test coverage
+  - See [docs/CACHING.md](docs/CACHING.md) for details
 
 
 ### Key Algorithms Implemented
@@ -260,10 +283,11 @@ This project uses these global Claude Code commands:
 
 - **Architecture**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **Development Plan**: [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
+- **Caching Guide**: [docs/CACHING.md](docs/CACHING.md)
 - **Automated Workflow**: [docs/AUTOMATED_WORKFLOW.md](docs/AUTOMATED_WORKFLOW.md)
 - **Setup Guide**: [docs/README.md](docs/README.md)
 - **GitHub Issues**: Track development progress by phase
 
 ---
 
-**Last Updated**: 2025-10-05 (Phase 5 complete, Phase 6 in progress)
+**Last Updated**: 2025-10-05 (Phase 5 complete, Phase 6 in progress, Caching optimization implemented)

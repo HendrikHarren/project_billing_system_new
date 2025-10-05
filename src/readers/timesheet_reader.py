@@ -7,12 +7,17 @@ from Google Sheets, converting it into validated TimesheetEntry objects.
 import datetime as dt
 import logging
 import re
-from typing import Any, Dict, List, Literal, Optional
+
+# Import TYPE_CHECKING to avoid circular imports
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
 
 from pydantic import ValidationError
 
 from src.models.timesheet import TimesheetEntry
 from src.services.google_sheets_service import GoogleSheetsService
+
+if TYPE_CHECKING:
+    from src.services.sheets_cache_service import SheetsCacheService
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +46,7 @@ class TimesheetReader:
 
     Attributes:
         sheets_service: Google Sheets service for data access
+        cache_service: Optional cache service for improved performance
 
     Example:
         >>> from src.services.google_sheets_service import GoogleSheetsService
@@ -51,13 +57,19 @@ class TimesheetReader:
         42
     """
 
-    def __init__(self, sheets_service: GoogleSheetsService):
+    def __init__(
+        self,
+        sheets_service: GoogleSheetsService,
+        cache_service: Optional["SheetsCacheService"] = None,
+    ):
         """Initialize the timesheet reader.
 
         Args:
             sheets_service: Google Sheets service instance for data access
+            cache_service: Optional cache service for improved performance
         """
         self.sheets_service = sheets_service
+        self.cache_service = cache_service
 
     def read_timesheet(
         self,
@@ -95,7 +107,12 @@ class TimesheetReader:
 
             # Read data starting from row 3 (skip header and example)
             range_name = f"{sheet_name}!A{start_row}:I"
-            df = self.sheets_service.read_sheet(spreadsheet_id, range_name)
+
+            # Use cache service if available, otherwise direct read
+            if self.cache_service:
+                df = self.cache_service.read_sheet_cached(spreadsheet_id, range_name)
+            else:
+                df = self.sheets_service.read_sheet(spreadsheet_id, range_name)
 
             if df.empty:
                 logger.info(f"No data found in {spreadsheet_id}")

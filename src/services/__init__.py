@@ -12,6 +12,7 @@ This package provides modern, resilient Google API services with:
 from .google_drive_service import GoogleDriveService
 from .google_sheets_service import GoogleSheetsService
 from .retry_handler import CircuitBreakerError, RetryExhaustedException, RetryHandler
+from .sheets_cache_service import SheetsCacheService
 
 __all__ = [
     "RetryHandler",
@@ -19,4 +20,5 @@ __all__ = [
     "CircuitBreakerError",
     "GoogleSheetsService",
     "GoogleDriveService",
+    "SheetsCacheService",
 ]

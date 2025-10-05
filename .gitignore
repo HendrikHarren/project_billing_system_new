@@ -120,6 +120,9 @@ jspm_packages/
 .cache
 .parcel-cache
 
+# Billing system cache
+.cache/
+
 # next.js build output
 .next
 

@@ -209,6 +209,44 @@ class GoogleDriveService:
             logger.error(f"Unexpected error getting file metadata: {e}")
             raise
 
+    def get_modification_time(self, file_id: str) -> datetime:
+        """
+        Get the modification time for a specific file.
+
+        Args:
+            file_id: The ID of the file
+
+        Returns:
+            Modification time as datetime object
+
+        Raises:
+            HttpError: If API request fails
+            ValueError: If modification time is not available
+        """
+        metadata = self.get_file_metadata(file_id)
+        modified_time_str = metadata.get("modifiedTime")
+
+        if not modified_time_str:
+            raise ValueError(f"No modification time available for file {file_id}")
+
+        # Parse RFC 3339 timestamp (e.g., "2025-10-05T10:00:00.000Z")
+        # Python's fromisoformat supports this format starting from 3.7
+        try:
+            # Remove 'Z' suffix and replace with '+00:00' for proper parsing
+            if modified_time_str.endswith("Z"):
+                modified_time_str = modified_time_str[:-1] + "+00:00"
+
+            modified_time = datetime.fromisoformat(modified_time_str)
+            logger.debug(f"Parsed modification time for {file_id}: {modified_time}")
+
+            return modified_time
+
+        except ValueError as e:
+            logger.error(
+                f"Failed to parse modification time '{modified_time_str}': {e}"
+            )
+            raise
+
     def search_files_by_name_pattern(
         self,
         name_pattern: str,
