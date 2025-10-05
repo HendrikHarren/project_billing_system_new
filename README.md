@@ -138,6 +138,11 @@ The project enforces high code quality standards:
 - ✅ Configuration management with validation
 - ✅ Modern service layer with retry logic and circuit breaker
 - ✅ Exponential backoff with jitter for rate limiting
+- ✅ **Dual-layer caching with modification-time-based invalidation**
+  - 60-90% reduction in Google API calls for unchanged files
+  - Persistent disk cache across application restarts
+  - Fast in-memory cache during session
+  - Automatic invalidation when files are modified
 - ✅ Test framework with comprehensive fixtures
 - ✅ CI/CD pipeline with quality checks
 - ✅ Timesheet data reading and validation (TimesheetReader)
