@@ -152,6 +152,7 @@ class GoogleSheetsWriter:
         - Header row formatting (bold, gray background, centered)
         - Freeze header row
         - Auto-resize columns
+        - Custom width for "Topics worked on" column (Timesheet_master only)
 
         Args:
             file_id: Spreadsheet file ID
@@ -216,6 +217,23 @@ class GoogleSheetsWriter:
                     }
                 }
             )
+
+        # Set custom width for "Topics worked on" column (G) in Timesheet_master
+        # Column G = index 6 (0-based)
+        requests.append(
+            {
+                "updateDimensionProperties": {
+                    "range": {
+                        "sheetId": 0,  # Timesheet_master
+                        "dimension": "COLUMNS",
+                        "startIndex": 6,
+                        "endIndex": 7,
+                    },
+                    "properties": {"pixelSize": 200},
+                    "fields": "pixelSize",
+                }
+            }
+        )
 
         # Apply all formatting
         self.sheets_service.spreadsheets().batchUpdate(
