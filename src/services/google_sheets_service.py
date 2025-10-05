@@ -46,7 +46,10 @@ class GoogleSheetsService:
         """
         self.credentials_info = credentials
         self.retry_handler = retry_handler or RetryHandler()
-        self.scopes = scopes or ["https://www.googleapis.com/auth/spreadsheets"]
+        self.scopes = scopes or [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive.file",
+        ]
 
         # Initialize Google Sheets API client
         self._service = self._create_service()

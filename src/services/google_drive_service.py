@@ -47,7 +47,10 @@ class GoogleDriveService:
         """
         self.credentials_info = credentials
         self.retry_handler = retry_handler or RetryHandler()
-        self.scopes = scopes or ["https://www.googleapis.com/auth/drive.file"]
+        self.scopes = scopes or [
+            "https://www.googleapis.com/auth/drive.readonly",
+            "https://www.googleapis.com/auth/drive.file",
+        ]
 
         # Initialize Google Drive API client
         self._service = self._create_service()
