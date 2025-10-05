@@ -170,6 +170,29 @@ class MasterTimesheetGenerator:
         # Determine location format (legacy uses "Off-site" and "On-site")
         location = "On-site" if entry.location == "onsite" else "Off-site"
 
+        # Calculate rate and cost from billing results
+        # Rate = hours_billed / billable_hours (when billable_hours > 0)
+        # Cost = total_cost / billable_hours (when billable_hours > 0)
+        rate = (
+            float(billing.hours_billed / billing.billable_hours)
+            if billing.billable_hours > 0
+            else 0.0
+        )
+        cost = (
+            float(billing.total_cost / billing.billable_hours)
+            if billing.billable_hours > 0
+            else 0.0
+        )
+
+        # Calculate travel surcharge cost (surcharge percentage of cost)
+        # If travel_surcharge exists and hours_billed > 0, calculate the percentage
+        travel_surcharge_pct = (
+            float(billing.travel_surcharge / billing.hours_billed)
+            if billing.hours_billed > 0 and billing.travel_surcharge > 0
+            else 0.15  # Default 15% from legacy
+        )
+        travel_surcharge_cost = float(billing.total_cost * travel_surcharge_pct)
+
         row = {
             "Name": entry.freelancer_name,
             "Date": self._format_date(entry.date),
@@ -182,16 +205,16 @@ class MasterTimesheetGenerator:
             "Travel time": self._format_minutes_as_time(entry.travel_time_minutes),
             "Trip Start Date": self._format_date(trip.start_date) if trip else "",
             "Trip Duration": trip.duration_days if trip else 0,
-            "Rate": float(billing.hourly_rate),
-            "Cost": float(billing.cost_per_hour),
+            "Rate": rate,
+            "Cost": cost,
             "Share of travel as work": 0.5,  # From legacy: 50% of travel time
-            "surcharge for travel": 0.15,  # From legacy: 15% travel surcharge
-            "Hours": float(billing.total_hours),
-            "Hours billed": float(billing.revenue),
-            "Hours cost": float(billing.cost),
-            "Travel hours billed": float(billing.travel_surcharge_hours),
-            "Travel surcharge billed": float(billing.travel_surcharge_revenue),
-            "Travel surcharge cost": float(billing.travel_surcharge_cost),
+            "surcharge for travel": travel_surcharge_pct,
+            "Hours": float(billing.billable_hours),
+            "Hours billed": float(billing.hours_billed),
+            "Hours cost": float(billing.total_cost),
+            "Travel hours billed": float(billing.travel_hours),
+            "Travel surcharge billed": float(billing.travel_surcharge),
+            "Travel surcharge cost": travel_surcharge_cost,
             "Year": entry.date.year,
             "Month": entry.date.month,
             "Week": entry.date.isocalendar().week,
