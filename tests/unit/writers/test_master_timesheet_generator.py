@@ -86,7 +86,6 @@ def sample_trips():
             location="onsite",
             start_date=dt.date(2023, 6, 16),
             end_date=dt.date(2023, 6, 17),
-            duration_days=2,
         ),
     ]
 
