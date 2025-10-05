@@ -191,7 +191,7 @@ class MasterTimesheetGenerator:
             if billing.hours_billed > 0 and billing.travel_surcharge > 0
             else 0.15  # Default 15% from legacy
         )
-        travel_surcharge_cost = float(billing.total_cost * travel_surcharge_pct)
+        travel_surcharge_cost = float(billing.total_cost) * travel_surcharge_pct
 
         row = {
             "Name": entry.freelancer_name,
