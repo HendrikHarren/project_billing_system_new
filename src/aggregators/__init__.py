@@ -8,5 +8,17 @@ from src.aggregators.timesheet_aggregator import (
     AggregatedTimesheetData,
     TimesheetAggregator,
 )
+from src.aggregators.trip_aggregator import AggregatedTripData, TripAggregator
+from src.aggregators.weekly_hours_calculator import (
+    WeeklyHoursCalculator,
+    WeeklyHoursData,
+)
 
-__all__ = ["AggregatedTimesheetData", "TimesheetAggregator"]
+__all__ = [
+    "AggregatedTimesheetData",
+    "TimesheetAggregator",
+    "AggregatedTripData",
+    "TripAggregator",
+    "WeeklyHoursCalculator",
+    "WeeklyHoursData",
+]
