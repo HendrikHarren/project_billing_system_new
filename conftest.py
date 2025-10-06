@@ -20,7 +20,6 @@ def test_env_vars() -> Dict[str, str]:
         "GOOGLE_CLIENT_EMAIL": "test@test.com",
         "GOOGLE_CLIENT_ID": "test-client-id",
         "GOOGLE_CLIENT_X509_CERT_URL": "https://test.com/cert",
-        "GOOGLE_SUBJECT_EMAIL": "test@example.com",
         "TIMESHEET_FOLDER_ID": "test-folder-id",
         "PROJECT_TERMS_FILE_ID": "test-terms-id",
         "MONTHLY_INVOICING_FOLDER_ID": "test-invoicing-id",

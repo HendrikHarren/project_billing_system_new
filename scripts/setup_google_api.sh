@@ -22,7 +22,7 @@ echo "This script will guide you through setting up Google API access."
 echo "You'll need:"
 echo "  - Google Cloud Console access"
 echo "  - Permission to create projects and service accounts"
-echo "  - Access to Google Workspace Admin (for domain-wide delegation)"
+echo "  - Access to Google Shared Drive or ability to share files with service account"
 echo ""
 read -p "Press Enter to continue..."
 
@@ -94,45 +94,28 @@ else
     echo -e "${YELLOW}Warning: Could not read key file${NC}"
 fi
 
-# Step 5: Domain-Wide Delegation (Optional)
+# Step 5: Share Files (Recommended: Use Shared Drive)
 echo ""
-echo -e "${GREEN}Step 5: Enable Domain-Wide Delegation (Optional)${NC}"
-echo "------------------------------------------------"
-echo "Only needed if you want to impersonate users in your Google Workspace."
-echo ""
-read -p "Do you need domain-wide delegation? (y/n): " NEED_DWD
-
-if [[ "$NEED_DWD" =~ ^[Yy]$ ]]; then
-    echo ""
-    echo "1. In the service account details, enable 'Google Workspace Domain-wide Delegation'"
-    echo "2. Go to: https://admin.google.com/"
-    echo "3. Navigate to: Security → API Controls → Domain-wide Delegation"
-    echo "4. Click 'Add new'"
-    echo "5. Enter Client ID (from the JSON key file)"
-    echo "6. Add OAuth scopes:"
-    echo "   https://www.googleapis.com/auth/spreadsheets"
-    echo "   https://www.googleapis.com/auth/drive"
-    echo "7. Click 'Authorize'"
-    echo ""
-    read -p "Enter email to impersonate: " SUBJECT_EMAIL
-    echo "✓ Subject email: $SUBJECT_EMAIL"
-fi
-
-# Step 6: Share Files
-echo ""
-echo -e "${GREEN}Step 6: Share Google Sheets and Folders${NC}"
+echo -e "${GREEN}Step 5: Share Google Sheets and Folders${NC}"
 echo "---------------------------------------"
-echo "Share the following with your service account ($GOOGLE_CLIENT_EMAIL):"
-echo "  1. Timesheet folder (grant Viewer or Editor access)"
-echo "  2. Project terms spreadsheet (grant Viewer access)"
-echo "  3. Output folder for reports (grant Editor access)"
+echo "RECOMMENDED: Use Google Shared Drive for better security and management."
+echo ""
+echo "Option A: Shared Drive (Recommended)"
+echo "  1. Create a Shared Drive (or use existing)"
+echo "  2. Add service account as Content Manager or Manager"
+echo "  3. Move timesheet folders and files to Shared Drive"
+echo ""
+echo "Option B: Direct File Sharing"
+echo "  1. Share timesheet folder with $GOOGLE_CLIENT_EMAIL (Viewer/Editor)"
+echo "  2. Share project terms spreadsheet with $GOOGLE_CLIENT_EMAIL (Viewer)"
+echo "  3. Share output folder with $GOOGLE_CLIENT_EMAIL (Editor)"
 echo ""
 read -p "Press Enter when files are shared..."
 echo "✓ Files shared"
 
-# Step 7: Get File/Folder IDs
+# Step 6: Get File/Folder IDs
 echo ""
-echo -e "${GREEN}Step 7: Collect File and Folder IDs${NC}"
+echo -e "${GREEN}Step 6: Collect File and Folder IDs${NC}"
 echo "------------------------------------"
 echo "You'll need the IDs from the URLs:"
 echo "  Folder: https://drive.google.com/drive/folders/FOLDER_ID_HERE"
@@ -142,9 +125,9 @@ read -p "Enter Timesheet Folder ID: " TIMESHEET_FOLDER_ID
 read -p "Enter Project Terms File ID: " PROJECT_TERMS_FILE_ID
 read -p "Enter Output Folder ID: " MONTHLY_INVOICING_FOLDER_ID
 
-# Step 8: Generate .env file
+# Step 7: Generate .env file
 echo ""
-echo -e "${GREEN}Step 8: Generate .env File${NC}"
+echo -e "${GREEN}Step 7: Generate .env File${NC}"
 echo "--------------------------"
 
 ENV_FILE=".env"
@@ -173,9 +156,9 @@ with open('$ENV_FILE', 'w') as f:
     f.write(f"GOOGLE_CLIENT_EMAIL={key_data['client_email']}\n")
     f.write(f"GOOGLE_CLIENT_ID={key_data['client_id']}\n")
     f.write(f"GOOGLE_CLIENT_X509_CERT_URL={key_data['client_x509_cert_url']}\n")
-    f.write("\n# Domain-wide delegation (if enabled)\n")
-    f.write("GOOGLE_SUBJECT_EMAIL=${SUBJECT_EMAIL:-your-email@domain.com}\n")
     f.write("\n# Google Drive/Sheets Configuration\n")
+    f.write("# Note: Service account must have access to these folders/files\n")
+    f.write("# (e.g., via Google Shared Drive or direct file sharing)\n")
     f.write(f"TIMESHEET_FOLDER_ID=$TIMESHEET_FOLDER_ID\n")
     f.write(f"PROJECT_TERMS_FILE_ID=$PROJECT_TERMS_FILE_ID\n")
     f.write(f"MONTHLY_INVOICING_FOLDER_ID=$MONTHLY_INVOICING_FOLDER_ID\n")
@@ -194,9 +177,9 @@ EOF
     echo "✓ Environment file created: $ENV_FILE"
 fi
 
-# Step 9: Test Connection
+# Step 8: Test Connection
 echo ""
-echo -e "${GREEN}Step 9: Test Connection${NC}"
+echo -e "${GREEN}Step 8: Test Connection${NC}"
 echo "-----------------------"
 echo "Testing Google API connection..."
 echo ""

@@ -105,25 +105,12 @@ class ConfigValidator:
 
         print("\nValidating email formats...")
 
-        # Client email
+        # Client email (service account email)
         if "@" not in self.config.google_client_email:
             self.errors.append("GOOGLE_CLIENT_EMAIL is not a valid email")
             print("✗ GOOGLE_CLIENT_EMAIL is not valid")
             return False
         print(f"✓ GOOGLE_CLIENT_EMAIL is valid: {self.config.google_client_email}")
-
-        # Subject email
-        if "@" not in self.config.google_subject_email:
-            self.warnings.append("GOOGLE_SUBJECT_EMAIL may not be valid")
-            print(
-                f"⚠ GOOGLE_SUBJECT_EMAIL may not be valid: "
-                f"{self.config.google_subject_email}"
-            )
-        else:
-            print(
-                f"✓ GOOGLE_SUBJECT_EMAIL is valid: "
-                f"{self.config.google_subject_email}"
-            )
 
         return True
 
@@ -173,14 +160,13 @@ class ConfigValidator:
         try:
             # Get service account credentials
             credentials = self.config.get_google_service_account_info()
-            subject_email = self.config.google_subject_email
 
             # Test Sheets API
-            GoogleSheetsService(credentials=credentials, subject_email=subject_email)
+            GoogleSheetsService(credentials=credentials)
             print("✓ Google Sheets API connection successful")
 
             # Test Drive API
-            GoogleDriveService(credentials=credentials, subject_email=subject_email)
+            GoogleDriveService(credentials=credentials)
             print("✓ Google Drive API connection successful")
 
             return True
@@ -200,15 +186,10 @@ class ConfigValidator:
         try:
             # Get service account credentials
             credentials = self.config.get_google_service_account_info()
-            subject_email = self.config.google_subject_email
 
             # Create service instances
-            drive_service = GoogleDriveService(
-                credentials=credentials, subject_email=subject_email
-            )
-            sheets_service = GoogleSheetsService(
-                credentials=credentials, subject_email=subject_email
-            )
+            drive_service = GoogleDriveService(credentials=credentials)
+            sheets_service = GoogleSheetsService(credentials=credentials)
 
             # Test timesheet folder access
             folder = drive_service.get_file_metadata(self.config.timesheet_folder_id)
