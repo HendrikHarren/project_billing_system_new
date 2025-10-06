@@ -1,8 +1,75 @@
 # Billing System Documentation
 
-## Project Overview
+## Overview
 
-A modern Python application for processing freelancer timesheets from Google Sheets, calculating billing amounts, tracking travel reimbursements, and generating comprehensive reports.
+Welcome to the Billing System documentation! This is a modern Python application for processing freelancer timesheets from Google Sheets, calculating billing amounts, tracking travel reimbursements, and generating comprehensive reports.
+
+## Documentation Navigation
+
+### 🚀 Getting Started
+
+**New Users Start Here:**
+
+1. [User Guide](USER_GUIDE.md) - Complete setup and usage guide
+   - Google API setup walkthrough
+   - First report generation
+   - Common use cases and workflows
+
+2. [Configuration Reference](CONFIGURATION.md) - Environment variables and settings
+   - All configuration options explained
+   - Example configurations for different environments
+   - Security best practices
+
+3. [Troubleshooting Guide](TROUBLESHOOTING.md) - Common issues and solutions
+   - Authentication errors
+   - Configuration problems
+   - Data validation issues
+   - Performance troubleshooting
+
+### 🐳 Deployment
+
+**For Production Deployment:**
+
+4. [Deployment Guide](DEPLOYMENT.md) - Production deployment with Docker
+   - Docker and Docker Compose setup
+   - Production configuration
+   - Monitoring and logging
+   - Backup and recovery
+   - Scaling considerations
+
+### 🏗️ Technical Documentation
+
+**For Developers and Contributors:**
+
+5. [Architecture Overview](ARCHITECTURE.md) - System design and data flow
+   - High-level architecture
+   - Component responsibilities
+   - Data flow diagrams
+   - Key algorithms
+
+6. [Caching Guide](CACHING.md) - Dual-layer caching system
+   - Cache architecture
+   - Performance optimization
+   - Configuration tuning
+
+7. [Automated Workflow](AUTOMATED_WORKFLOW.md) - Code quality and CI/CD
+   - Pre-commit hooks
+   - CI/CD pipeline
+   - Quality standards
+
+### 👥 Contributing
+
+8. [Contributing Guidelines](../CONTRIBUTING.md) - How to contribute
+   - Development setup
+   - Code standards
+   - Testing guidelines
+   - Pull request process
+
+## Quick Links
+
+- **Main README**: [../README.md](../README.md)
+- **Development Plan**: [../DEVELOPMENT_PLAN.md](../DEVELOPMENT_PLAN.md)
+- **License**: [../LICENSE](../LICENSE)
 
 ## Key Features
 
@@ -12,12 +79,15 @@ A modern Python application for processing freelancer timesheets from Google She
 - **Travel Surcharge Handling**: Additional billing for on-site work
 - **Multiple Report Formats**: Detailed timesheets, pivot summaries, and weekly capacity views
 - **Data Validation**: Comprehensive validation to ensure accuracy and completeness
+- **Docker Deployment**: Containerized deployment for production environments
+- **Dual-Layer Caching**: 60-90% reduction in API calls with intelligent caching
 
 ## System Requirements
 
 - Python 3.9+
 - Google Service Account with Sheets and Drive API access
 - Access to freelancer timesheet Google Sheets
+- (Optional) Docker for containerized deployment
 
 ## Quick Start
 

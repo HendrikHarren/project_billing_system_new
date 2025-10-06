@@ -1,0 +1,92 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info
+dist
+build
+*.whl
+.eggs
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+
+# Cache
+.cache/
+*.cache
+__pycache__/
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Documentation source (included separately)
+docs/
+
+# CI/CD
+.github/
+
+# Development files
+tests/
+.pre-commit-config.yaml
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Worktrees
+.git/worktrees/
+*-worktrees/
+
+# README and documentation (include minimal docs in image)
+README.md
+DEVELOPMENT_PLAN.md
+CLAUDE.md
+CONTRIBUTING.md

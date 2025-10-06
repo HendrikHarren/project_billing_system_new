@@ -8,8 +8,11 @@ A modern Python application for processing freelancer timesheets from Google She
 - Python 3.9+
 - Google Service Account with Sheets and Drive API access
 - Access to freelancer timesheet Google Sheets
+- (Optional) Docker for containerized deployment
 
 ### Installation
+
+**Option 1: Standard Python Installation**
 
 ```bash
 # Clone the repository
@@ -24,6 +27,26 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+**Option 2: Docker Deployment** (Recommended for Production)
+
+```bash
+# Clone the repository
+git clone https://github.com/HendrikHarren/project_billing_system_new.git
+cd project_billing_system_new
+
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your credentials
+
+# Deploy with Docker Compose
+docker-compose up -d
+
+# Generate report
+docker-compose run billing-system python -m src.cli generate-report --month 2024-10
+```
+
+See [Deployment Guide](docs/DEPLOYMENT.md) for complete deployment instructions.
+
 ### Configuration
 
 ```bash
@@ -31,9 +54,10 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Edit .env with your Google API credentials
+nano .env
 ```
 
-Required environment variables:
+**Required environment variables:**
 - `GOOGLE_PROJECT_ID`: Your Google Cloud project ID
 - `GOOGLE_PRIVATE_KEY`: Service account private key
 - `GOOGLE_CLIENT_EMAIL`: Service account email
@@ -41,7 +65,14 @@ Required environment variables:
 - `PROJECT_TERMS_FILE_ID`: Google Sheets file with project rates
 - `MONTHLY_INVOICING_FOLDER_ID`: Output folder for generated reports
 
-See `.env.example` for complete configuration options.
+See [Configuration Reference](docs/CONFIGURATION.md) for all configuration options.
+
+**Quick Setup Helper:**
+
+```bash
+# Interactive Google API setup wizard
+./scripts/setup_google_api.sh
+```
 
 ### Basic Usage
 
@@ -52,7 +83,7 @@ python test_connection.py
 # Run tests
 pytest
 
-#CLI Commands
+# CLI Commands
 
 # Generate monthly billing report
 python -m src.cli generate-report --month 2024-10
@@ -73,6 +104,8 @@ python -m src.cli validate-data --file-id abc123xyz --severity warning
 python -m src.cli --help
 python -m src.cli generate-report --help
 ```
+
+See [User Guide](docs/USER_GUIDE.md) for detailed usage instructions.
 
 ## 🏗️ Architecture
 
@@ -254,9 +287,65 @@ The project enforces high code quality standards:
   - Rate limiting and error recovery tests
   - 11 new integration test files
   - Comprehensive test infrastructure and utilities
-- [ ] Documentation & Deployment (Issue #20)
+- [x] Documentation & Deployment (Issue #20)
+  - Comprehensive user guide and setup instructions
+  - Configuration reference and troubleshooting guide
+  - Docker deployment infrastructure (Dockerfile, docker-compose)
+  - Deployment scripts and validation tools
+  - Production deployment guide
+  - Contributing guidelines and LICENSE
+
+## 🐳 Deployment
+
+### Docker Deployment
+
+The recommended way to deploy the Billing System is using Docker:
+
+**Quick Deployment:**
+
+```bash
+# Automated deployment script
+./scripts/deploy.sh production
+
+# Manual deployment
+docker-compose up -d
+
+# Run commands
+docker-compose run billing-system python -m src.cli generate-report --month 2024-10
+```
+
+**Production Deployment:**
+
+```bash
+# Use production compose file
+docker-compose -f docker-compose.prod.yml up -d
+
+# Set up automated monthly reports (cron)
+0 6 1 * * cd /path/to/billing-system && docker-compose run billing-system python -m src.cli generate-report --month $(date -d "last month" +%Y-%m)
+```
+
+**Configuration Validation:**
+
+```bash
+# Validate configuration before deployment
+python scripts/validate_config.py
+
+# Test Docker image
+docker run --rm billing-system:latest python -c "from src.config.settings import get_config; get_config()"
+```
+
+See [Deployment Guide](docs/DEPLOYMENT.md) for complete production deployment instructions, including:
+- Production configuration
+- Monitoring and logging
+- Backup and recovery procedures
+- Scaling considerations
+- Troubleshooting deployment issues
 
 ## 🤝 Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+**Quick Start:**
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
@@ -266,6 +355,12 @@ The project enforces high code quality standards:
 6. Commit your changes: `git commit -m 'Add amazing feature'`
 7. Push to the branch: `git push origin feature/amazing-feature`
 8. Open a Pull Request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for complete contribution guidelines including:
+- Code standards and quality requirements
+- Testing guidelines
+- Documentation requirements
+- Pull request process
 
 ## 📋 GitHub Issues
 
@@ -280,10 +375,25 @@ Development is tracked through GitHub issues organized by phases:
 
 ## 📚 Documentation
 
+### User Documentation
+- [User Guide](docs/USER_GUIDE.md) - Complete step-by-step guide for setup and usage
+- [Configuration Reference](docs/CONFIGURATION.md) - All environment variables and settings
+- [Troubleshooting Guide](docs/TROUBLESHOOTING.md) - Common issues and solutions
+
+### Deployment Documentation
+- [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment with Docker
+- [Dockerfile](Dockerfile) - Container configuration
+- [docker-compose.yml](docker-compose.yml) - Docker Compose configuration
+
+### Technical Documentation
 - [Architecture Overview](docs/ARCHITECTURE.md) - System design and data flow
-- [Development Plan](DEVELOPMENT_PLAN.md) - Complete project roadmap
-- [Setup Guide](docs/README.md) - Detailed setup and usage instructions
+- [Caching Guide](docs/CACHING.md) - Dual-layer caching system
 - [Automated Workflow](docs/AUTOMATED_WORKFLOW.md) - Code quality and CI/CD automation
+- [Development Plan](DEVELOPMENT_PLAN.md) - Complete project roadmap
+
+### Contributing
+- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute to the project
+- [License](LICENSE) - MIT License
 
 ## 🛠️ Tech Stack
 
@@ -309,4 +419,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Current Status**: Phase 4 complete ✅ | Phase 5 Report Generation in progress 🚧 (Issues #13, #14, #15 complete)
+**Current Status**: All phases complete ✅ | Production-ready system with comprehensive documentation and deployment infrastructure
