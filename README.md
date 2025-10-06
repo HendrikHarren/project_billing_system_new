@@ -123,6 +123,15 @@ pytest tests/unit/
 # Integration tests (requires API access)
 pytest tests/integration/
 
+# Skip slow/integration tests for quick local testing
+pytest -m "not slow and not integration"
+
+# Run only performance benchmarks
+pytest -m performance --benchmark-only
+
+# Run end-to-end tests
+pytest -m e2e
+
 # Smoke tests (quick verification)
 pytest tests/unit/services/test_services_smoke.py
 
@@ -132,12 +141,33 @@ pytest tests/unit/services/test_google_drive_service.py -v
 
 #### Test Architecture
 
-- **Unit Tests**: Fully mocked, no external API calls
-- **Integration Tests**: Require real Google API credentials
-- **Service Tests**: Use proper mocking patterns with patch cleanup
-- **Configuration Tests**: Environment variable isolation
+- **Unit Tests** (574 tests): Fully mocked, no external API calls
+  - Fast execution (< 2 minutes)
+  - 82% code coverage
+  - Isolated test execution
 
-All unit tests use proper mocking to ensure fast, isolated execution without external dependencies.
+- **Integration Tests** (New in Issue #19): Require real Google API credentials
+  - End-to-end pipeline tests
+  - Google Sheets/Drive API integration tests
+  - Performance benchmarks and scalability tests
+  - Rate limiting and error recovery tests
+  - Marked with `@pytest.mark.integration` and `@pytest.mark.slow`
+
+- **Performance Tests**: Benchmark critical operations
+  - Timesheet reading performance
+  - Aggregation performance with large datasets
+  - Cache effectiveness measurements
+  - Marked with `@pytest.mark.performance`
+
+- **Test Markers**:
+  - `@pytest.mark.unit` - Fast unit tests
+  - `@pytest.mark.integration` - Real API tests
+  - `@pytest.mark.slow` - Long-running tests
+  - `@pytest.mark.api` - Requires API access
+  - `@pytest.mark.performance` - Performance benchmarks
+  - `@pytest.mark.e2e` - End-to-end workflows
+
+All unit tests use proper mocking to ensure fast, isolated execution without external dependencies. Integration tests verify system behavior with real Google APIs and production-like data volumes.
 
 ### Code Quality
 
@@ -211,12 +241,20 @@ The project enforces high code quality standards:
 - [x] Pivot table builder (Issue #14)
 - [x] Google Sheets writer (Issue #15)
 
-**Phase 6: CLI Application** 🚧 In Progress
+**Phase 6: CLI Application** ✅ Complete
 - [x] CLI Interface (Issue #16)
+- [x] Error Handling & Logging (Issue #18)
 - [ ] Report Automation (Issue #17)
-- [ ] Error Handling & Logging (Issue #18)
 
-**Phase 7**: See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for complete roadmap
+**Phase 7: Testing & Documentation** ✅ Complete
+- [x] Integration Testing Suite (Issue #19)
+  - End-to-end pipeline tests
+  - Google API integration tests
+  - Performance benchmarking framework
+  - Rate limiting and error recovery tests
+  - 11 new integration test files
+  - Comprehensive test infrastructure and utilities
+- [ ] Documentation & Deployment (Issue #20)
 
 ## 🤝 Contributing
 
