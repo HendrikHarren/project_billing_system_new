@@ -33,10 +33,9 @@ class GoogleSheetsService:
         credentials: Optional[Dict[str, Any]] = None,
         retry_handler: Optional[RetryHandler] = None,
         scopes: Optional[List[str]] = None,
-        subject_email: Optional[str] = None,
     ):
         """
-        Initialize Google Sheets service.
+        Initialize Google Sheets service with direct service account access.
 
         Args:
             credentials: Service account credentials dict from
@@ -44,8 +43,10 @@ class GoogleSheetsService:
                         If None, falls back to ADC (Application Default Credentials)
             retry_handler: Custom retry handler instance
             scopes: Custom OAuth scopes for authentication
-            subject_email: Email address to impersonate for domain-wide delegation.
-                          Required if service account needs to access user's files.
+
+        Note:
+            Service account must have direct access to spreadsheets via
+            Shared Drive or direct file sharing.
         """
         self.credentials_info = credentials
         self.retry_handler = retry_handler or RetryHandler()
@@ -53,42 +54,28 @@ class GoogleSheetsService:
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive",
         ]
-        self.subject_email = subject_email
 
         # Initialize Google Sheets API client
         self._service = self._create_service()
 
     def _create_service(self):
         """
-        Create Google Sheets API service using service account or ADC.
+        Create Google Sheets API service using direct service account access or ADC.
 
         Returns:
             Google Sheets API service instance
         """
         try:
             if self.credentials_info:
-                # Use service account credentials from config
-                if self.subject_email:
-                    # Use domain-wide delegation to impersonate user
-                    credentials = service_account.Credentials.from_service_account_info(
-                        self.credentials_info,
-                        scopes=self.scopes,
-                        subject=self.subject_email,
-                    )
-                    project = self.credentials_info.get("project_id", "unknown")
-                    logger.info(
-                        f"Google Sheets service initialized with service account "
-                        f"for project: {project}, impersonating: {self.subject_email}"
-                    )
-                else:
-                    credentials = service_account.Credentials.from_service_account_info(
-                        self.credentials_info, scopes=self.scopes
-                    )
-                    project = self.credentials_info.get("project_id", "unknown")
-                    logger.info(
-                        f"Google Sheets service initialized with service account "
-                        f"for project: {project}"
-                    )
+                # Use service account credentials with direct access
+                credentials = service_account.Credentials.from_service_account_info(
+                    self.credentials_info, scopes=self.scopes
+                )
+                project = self.credentials_info.get("project_id", "unknown")
+                logger.info(
+                    f"Google Sheets service initialized with service account "
+                    f"for project: {project}"
+                )
             else:
                 # Fall back to Application Default Credentials (ADC)
                 credentials, project = google.auth.default(scopes=self.scopes)

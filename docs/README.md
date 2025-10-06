@@ -155,8 +155,11 @@ GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour-private-key\n-----END PRIV
 GOOGLE_CLIENT_EMAIL=your-service-account@your-project.iam.gserviceaccount.com
 GOOGLE_CLIENT_ID=your-client-id
 GOOGLE_CLIENT_X509_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/...
-GOOGLE_SUBJECT_EMAIL=hendrik@harren.com
 ```
+
+**Authentication Note**: The system uses direct service account access. The service account must be granted access to files/folders either via:
+- **Shared Drive** (recommended for teams): Add service account as Content Manager or Manager
+- **Direct sharing**: Share individual files/folders with the service account email
 
 ### Required Google Drive/Sheets IDs
 
@@ -266,13 +269,13 @@ pytest --cov=src --cov-report=html
 
 1. **Authentication Errors**
    - Verify Google service account credentials in `.env`
-   - Ensure service account has domain-wide delegation enabled
-   - Check that `GOOGLE_SUBJECT_EMAIL` is correct
+   - Ensure service account has direct access to files/folders
+   - Check that files are in Shared Drive or directly shared
 
 2. **Permission Errors**
-   - Verify service account has access to Google Sheets/Drive
-   - Check folder and file IDs are correct
-   - Ensure timesheet files are shared with service account
+   - Grant service account access via Shared Drive (recommended) or direct sharing
+   - Verify folder and file IDs are correct
+   - Ensure service account has appropriate role (Content Manager/Editor)
 
 3. **Import Errors**
    - Verify virtual environment is activated

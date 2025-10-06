@@ -29,7 +29,6 @@ class BillingSystemConfig(BaseSettings):
         alias="GOOGLE_AUTH_PROVIDER_X509_CERT_URL",
     )
     google_client_x509_cert_url: str = Field(alias="GOOGLE_CLIENT_X509_CERT_URL")
-    google_subject_email: str = Field(alias="GOOGLE_SUBJECT_EMAIL")
 
     # Google API Scopes
     google_scopes: List[str] = Field(
@@ -67,6 +66,7 @@ class BillingSystemConfig(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         validate_default=True,
+        extra="ignore",  # Ignore GOOGLE_SUBJECT_EMAIL from old .env files
     )
 
     @field_validator("google_private_key")

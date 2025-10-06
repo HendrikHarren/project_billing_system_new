@@ -50,15 +50,17 @@ class TestGoogleAuth:
     @patch("src.google_auth.service_account.Credentials.from_service_account_info")
     @patch("src.google_auth.load_credentials")
     def test_get_credentials(self, mock_load_credentials, mock_from_service_account):
-        """Test get_credentials function."""
+        """Test get_credentials function without subject parameter."""
         mock_load_credentials.return_value = {"test": "credentials"}
         mock_credentials = Mock()
         mock_from_service_account.return_value = mock_credentials
 
-        with patch.dict(os.environ, {"GOOGLE_SUBJECT_EMAIL": "test@test.com"}):
-            result = get_credentials()
+        result = get_credentials()
 
         assert result == mock_credentials
+        # Verify that credentials are created without subject parameter
+        call_args = mock_from_service_account.call_args
+        assert call_args[1].get("subject") is None
         mock_from_service_account.assert_called_once()
 
     @patch("src.google_auth.build")

@@ -67,7 +67,7 @@ google.auth.exceptions.RefreshError: Insufficient authentication scopes
 
 **Causes:**
 - Service account doesn't have required API access
-- Missing OAuth scopes for domain-wide delegation
+- Service account not granted direct access to files/folders
 
 **Solutions:**
 
@@ -75,16 +75,14 @@ google.auth.exceptions.RefreshError: Insufficient authentication scopes
    - Google Sheets API
    - Google Drive API
 
-2. **Check domain-wide delegation** (if using)
-   - Go to [Admin Console](https://admin.google.com/) → Security → API Controls
-   - Verify scopes include:
-     ```
-     https://www.googleapis.com/auth/spreadsheets
-     https://www.googleapis.com/auth/drive
-     ```
+2. **Grant service account access to files**
 
-3. **Share files with service account**
-   - Share Google Sheets/folders with service account email
+   **Option A: Shared Drive (Recommended)**
+   - Add service account to Shared Drive as Content Manager or Manager
+   - Move all files/folders to the Shared Drive
+
+   **Option B: Direct Sharing**
+   - Share Google Sheets/folders directly with service account email
    - Grant Editor or Viewer permissions as needed
 
 ### Error: "Permission denied"
@@ -146,6 +144,9 @@ ValidationError: TIMESHEET_FOLDER_ID is required
    - `GOOGLE_PROJECT_ID`
    - `GOOGLE_PRIVATE_KEY`
    - `GOOGLE_CLIENT_EMAIL`
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_PRIVATE_KEY_ID`
+   - `GOOGLE_CLIENT_X509_CERT_URL`
    - `TIMESHEET_FOLDER_ID`
    - `PROJECT_TERMS_FILE_ID`
    - `MONTHLY_INVOICING_FOLDER_ID`
@@ -488,10 +489,17 @@ HttpError 403: Insufficient permissions to create file
 - Service account doesn't have write access to output folder
 - Output folder doesn't exist
 - Wrong folder ID
+- Output folder not in Shared Drive or not shared directly
 
 **Solutions:**
 
-1. **Share output folder with service account**
+1. **Grant service account access to output folder**
+
+   **Option A: Shared Drive (Recommended)**
+   - Move `MONTHLY_INVOICING_FOLDER_ID` folder to Shared Drive
+   - Ensure service account has Content Manager or Manager role
+
+   **Option B: Direct Sharing**
    - Open `MONTHLY_INVOICING_FOLDER_ID` folder
    - Share with service account email
    - Grant **Editor** permissions
@@ -588,6 +596,34 @@ python -m src.cli generate-report --month 2024-10 2>&1 | tee debug.log
 
 ---
 
+### Shared Drive Access Issues
+
+**Symptoms:**
+- Files accessible in browser but not via API
+- Inconsistent permission errors
+
+**Causes:**
+- Service account not added to Shared Drive
+- Insufficient role in Shared Drive
+- Files in "My Drive" instead of Shared Drive
+
+**Solutions:**
+
+1. **Verify Shared Drive membership**
+   - Open Shared Drive → Manage members
+   - Ensure service account is listed
+   - Check role is Content Manager or Manager
+
+2. **Move files to Shared Drive**
+   - Files must be IN the Shared Drive, not just shared
+   - Right-click file → Move to → Select Shared Drive
+
+3. **Check folder structure**
+   - All configured folders must be in same Shared Drive
+   - Or all must have direct sharing with service account
+
+---
+
 ## Getting Help
 
 ### Still having issues?
@@ -604,6 +640,7 @@ python -m src.cli generate-report --month 2024-10 2>&1 | tee debug.log
      - Configuration (hide sensitive data!)
      - Python version (`python --version`)
      - Debug log output
+     - Whether using Shared Drive or direct sharing
 
 3. **Provide diagnostic information**
    ```bash
@@ -627,4 +664,4 @@ python -m src.cli generate-report --month 2024-10 2>&1 | tee debug.log
 
 ---
 
-**Remember**: Most issues are related to configuration or Google API permissions. Double-check your `.env` file and service account setup first!
+**Remember**: Most issues are related to configuration or Google API permissions. Ensure your service account has proper access via Shared Drive or direct file sharing!

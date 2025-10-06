@@ -47,7 +47,19 @@ def load_credentials() -> Dict[str, Any]:
 def get_credentials(
     scopes: Optional[list[str]] = None,
 ) -> service_account.Credentials:
-    """Get authenticated credentials for Google APIs."""
+    """
+    Get authenticated credentials for Google APIs using direct service account access.
+
+    Note: This uses direct service account authentication without user impersonation.
+    Ensure the service account has been granted access to the required Google Drive
+    folders and Sheets files (e.g., via Google Shared Drive).
+
+    Args:
+        scopes: List of OAuth scopes. Defaults to Sheets and Drive scopes.
+
+    Returns:
+        service_account.Credentials: Authenticated credentials for Google APIs.
+    """
     if scopes is None:
         scopes = [
             "https://www.googleapis.com/auth/spreadsheets",
@@ -55,10 +67,9 @@ def get_credentials(
         ]
 
     credentials_info = load_credentials()
-    subject_email = os.getenv("GOOGLE_SUBJECT_EMAIL")
 
     credentials = service_account.Credentials.from_service_account_info(
-        credentials_info, scopes=scopes, subject=subject_email
+        credentials_info, scopes=scopes
     )
 
     return credentials

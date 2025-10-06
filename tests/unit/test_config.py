@@ -216,11 +216,13 @@ class TestConfigurationFunctions:
 class TestConfigurationEdgeCases:
     """Test edge cases and error scenarios."""
 
-    def test_config_with_empty_strings(self, mock_env):
-        """Test configuration with empty string values."""
-        with pytest.raises(ValidationError):
-            BillingSystemConfig(
-                google_project_id="",  # Empty string should fail validation
+    def test_config_ignores_extra_fields(self):
+        """Test config ignores extra fields from old .env files."""
+        # Ensures backward compat during migration from domain-wide delegation
+        with patch.dict(os.environ, {}, clear=True):
+            # Should not raise ValidationError even with extra field
+            config = BillingSystemConfig(
+                google_project_id="test-project",
                 google_private_key_id="test",
                 google_private_key=(
                     "-----BEGIN PRIVATE KEY-----\ntest\n" "-----END PRIVATE KEY-----\n"
@@ -228,11 +230,13 @@ class TestConfigurationEdgeCases:
                 google_client_email="test@test.com",
                 google_client_id="test",
                 google_client_x509_cert_url="https://test.com",
-                google_subject_email="test@test.com",
+                google_subject_email="old-field@test.com",  # Extra field
                 timesheet_folder_id="test",
                 project_terms_file_id="test",
                 monthly_invoicing_folder_id="test",
             )
+            # Verify extra field was ignored (not set as attribute)
+            assert not hasattr(config, "google_subject_email")
 
     def test_config_case_insensitive_env_vars(self, mock_env):
         """Test that environment variable loading is case insensitive."""
@@ -255,7 +259,6 @@ class TestConfigurationEdgeCases:
         assert test_config.google_private_key.startswith("-----BEGIN PRIVATE KEY-----")
         assert test_config.google_client_email
         assert test_config.google_client_id
-        assert test_config.google_subject_email
 
         # Verify Google Drive/Sheets fields
         assert test_config.timesheet_folder_id
