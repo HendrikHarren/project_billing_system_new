@@ -66,6 +66,7 @@ class BillingSystemConfig(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         validate_default=True,
+        extra="ignore",  # Ignore GOOGLE_SUBJECT_EMAIL from old .env files
     )
 
     @field_validator("google_private_key")
