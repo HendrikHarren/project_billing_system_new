@@ -4,7 +4,7 @@ import functools
 import logging
 import threading
 import uuid
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, cast
 
 # Thread-local storage for log context
 _thread_local = threading.local()
@@ -69,7 +69,7 @@ class LogContext:
             **kwargs: Key-value pairs to add to log records
         """
         self.fields = kwargs
-        self.previous_context = None
+        self.previous_context: Optional[Dict[str, Any]] = None
 
     def __enter__(self):
         """Enter context and add fields to thread-local storage."""
@@ -88,7 +88,10 @@ class LogContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit context and remove fields from thread-local storage."""
         # Restore previous context
-        _thread_local.context = self.previous_context
+        if self.previous_context is not None:
+            _thread_local.context = self.previous_context
+        else:
+            _thread_local.context = {}
 
 
 class _ContextFilter(logging.Filter):
@@ -126,7 +129,7 @@ def sanitize_sensitive_data(data: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(data, dict):
         return data
 
-    sanitized = {}
+    sanitized: Dict[str, Any] = {}
 
     for key, value in data.items():
         # Check if field name is sensitive (case-insensitive)
@@ -134,7 +137,7 @@ def sanitize_sensitive_data(data: Dict[str, Any]) -> Dict[str, Any]:
             sanitized[key] = "***REDACTED***" if value is not None else None
         elif isinstance(value, dict):
             # Recursively sanitize nested dictionaries
-            sanitized[key] = sanitize_sensitive_data(value)
+            sanitized[key] = sanitize_sensitive_data(cast(Dict[str, Any], value))
         else:
             sanitized[key] = value
 

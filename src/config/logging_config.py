@@ -5,7 +5,7 @@ import logging
 import logging.handlers
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 
 class JSONFormatter(logging.Formatter):
@@ -183,6 +183,7 @@ def configure_logging(config: LoggingConfig) -> None:
     root_logger.setLevel(getattr(logging, config.log_level))
 
     # Create formatter based on config
+    formatter: Union[JSONFormatter, logging.Formatter]
     if config.log_format == "json":
         formatter = JSONFormatter()
     else:
