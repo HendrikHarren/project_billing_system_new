@@ -5,6 +5,8 @@
 pytest-cov>=4.0.0
 pytest-mock>=3.10.0
 pytest-timeout>=2.1.0
+pytest-benchmark>=4.0.0
+memory-profiler>=0.61.0
 
 # Code Quality
 black>=23.0.0

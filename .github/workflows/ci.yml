@@ -71,7 +71,8 @@ jobs:
         DEBUG: true
         LOG_LEVEL: DEBUG
       run: |
-        pytest -v --cov=src --cov-report=xml --cov-report=term-missing
+        # Skip integration tests in CI (they require real Google API credentials)
+        pytest -v --cov=src --cov-report=xml --cov-report=term-missing -m "not integration and not api"
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

@@ -154,6 +154,10 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: mark test as an integration test")
     config.addinivalue_line("markers", "slow: mark test as slow running")
     config.addinivalue_line("markers", "api: mark test as requiring API access")
+    config.addinivalue_line(
+        "markers", "performance: mark test as a performance benchmark"
+    )
+    config.addinivalue_line("markers", "e2e: mark test as end-to-end workflow test")
 
 
 def pytest_collection_modifyitems(config, items):
