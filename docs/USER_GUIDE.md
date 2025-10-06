@@ -91,33 +91,52 @@ The billing system uses Google Service Accounts to access Google Sheets and Driv
 
 ⚠️ **Security Warning**: This file contains sensitive credentials. Never commit it to version control!
 
-### Step 5: Enable Domain-Wide Delegation (Optional)
+### Step 5: Grant Service Account Access to Files
 
-If you need to impersonate users in your Google Workspace:
+The service account needs direct access to your Google Sheets and Drive folders. You have two options:
 
-1. In the service account details, click **Show domain-wide delegation**
-2. Check **Enable Google Workspace Domain-wide Delegation**
-3. Click **Save**
-4. Go to [Google Workspace Admin Console](https://admin.google.com/)
-5. Navigate to **Security** → **API Controls** → **Domain-wide Delegation**
-6. Click **Add new**
-7. Enter the service account **Client ID**
-8. Add OAuth scopes:
-   ```
-   https://www.googleapis.com/auth/spreadsheets
-   https://www.googleapis.com/auth/drive
-   ```
-9. Click **Authorize**
+#### Option A: Shared Drive (Recommended for Teams)
 
-### Step 6: Share Google Sheets with Service Account
+1. **Create or use existing Shared Drive**
+   - Go to [Google Drive](https://drive.google.com/)
+   - Click **Shared drives** → **New** (if creating new)
+   - Give it a name (e.g., "Billing System Data")
 
-1. Open your Google Sheets files (timesheets, project terms)
-2. Click **Share**
-3. Add the service account email (found in the JSON key file as `client_email`)
-4. Grant **Viewer** or **Editor** access as needed
-5. Click **Send**
+2. **Add service account to Shared Drive**
+   - Open the Shared Drive
+   - Click **Manage members**
+   - Add the service account email (from JSON key file: `client_email`)
+   - Grant **Content Manager** or **Manager** role
+   - Click **Send**
 
-### Step 7: Configure Environment Variables
+3. **Move your files to the Shared Drive**
+   - Move timesheet folder, project terms file, and output folder to this Shared Drive
+   - All team members and the service account will have access
+
+#### Option B: Direct File Sharing (For Individual Users)
+
+1. **Share timesheet folder**
+   - Open the timesheet folder in Google Drive
+   - Click **Share**
+   - Add the service account email (found in JSON key file as `client_email`)
+   - Grant **Viewer** access
+   - Click **Send**
+
+2. **Share project terms file**
+   - Open the project terms spreadsheet
+   - Click **Share**
+   - Add the service account email
+   - Grant **Viewer** access
+   - Click **Send**
+
+3. **Share output folder**
+   - Open the monthly invoicing folder
+   - Click **Share**
+   - Add the service account email
+   - Grant **Editor** access (required to create new files)
+   - Click **Send**
+
+### Step 6: Configure Environment Variables
 
 1. **Copy the example environment file**
    ```bash
@@ -137,14 +156,13 @@ If you need to impersonate users in your Google Workspace:
    GOOGLE_CLIENT_ID=123456789012345678901
    GOOGLE_CLIENT_X509_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/...
 
-   # Optional: For domain-wide delegation
-   GOOGLE_SUBJECT_EMAIL=your-email@yourdomain.com
-
    # Google Drive and Sheets IDs
    TIMESHEET_FOLDER_ID=your-timesheet-folder-id
    PROJECT_TERMS_FILE_ID=your-project-terms-file-id
    MONTHLY_INVOICING_FOLDER_ID=your-output-folder-id
    ```
+
+   **Note**: The service account must have direct access to these files/folders (via Shared Drive or direct sharing).
 
 3. **Find Google Drive Folder and File IDs**
 

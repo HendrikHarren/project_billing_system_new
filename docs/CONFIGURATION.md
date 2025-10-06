@@ -107,13 +107,6 @@ These variables configure authentication with Google Cloud APIs.
 - **Where to find**: Service account JSON key file (`client_x509_cert_url` field)
 - **Example**: `https://www.googleapis.com/robot/v1/metadata/x509/billing-system%40my-project.iam.gserviceaccount.com`
 
-#### `GOOGLE_SUBJECT_EMAIL`
-- **Type**: String (email)
-- **Required**: Yes (for domain-wide delegation)
-- **Description**: Email address to impersonate for domain-wide delegation
-- **When needed**: Required if using domain-wide delegation
-- **Example**: `admin@yourdomain.com`
-
 ### Optional Variables
 
 #### `GOOGLE_AUTH_URI`
@@ -139,6 +132,12 @@ These variables configure authentication with Google Cloud APIs.
 ## Google Drive/Sheets Configuration
 
 These variables specify which Google Drive folders and Sheets to use.
+
+**Important**: The service account must be granted direct access to all specified folders and files. This can be done by:
+1. Adding the service account to a **Shared Drive** (recommended for teams)
+2. Sharing individual files/folders directly with the service account email
+
+The service account email can be found in your service account JSON key file as `client_email`.
 
 ### Required Variables
 
@@ -322,7 +321,6 @@ GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\
 GOOGLE_CLIENT_EMAIL=billing-dev@my-project.iam.gserviceaccount.com
 GOOGLE_CLIENT_ID=123456789012345678901
 GOOGLE_CLIENT_X509_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/...
-GOOGLE_SUBJECT_EMAIL=developer@company.com
 
 # Google Drive/Sheets IDs
 TIMESHEET_FOLDER_ID=1GGQdjwFNf0u2-4FqwtkL7sKKx6iwqfVm
@@ -358,7 +356,6 @@ GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\
 GOOGLE_CLIENT_EMAIL=billing-prod@my-project.iam.gserviceaccount.com
 GOOGLE_CLIENT_ID=987654321098765432109
 GOOGLE_CLIENT_X509_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/...
-GOOGLE_SUBJECT_EMAIL=admin@company.com
 
 # Google Drive/Sheets IDs
 TIMESHEET_FOLDER_ID=1abc...production-folder
@@ -394,7 +391,6 @@ GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\
 GOOGLE_CLIENT_EMAIL=billing-test@my-project.iam.gserviceaccount.com
 GOOGLE_CLIENT_ID=111222333444555666777
 GOOGLE_CLIENT_X509_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/...
-GOOGLE_SUBJECT_EMAIL=test@company.com
 
 # Google Drive/Sheets IDs (test data)
 TIMESHEET_FOLDER_ID=1test...folder
@@ -474,6 +470,7 @@ Grant service account only necessary permissions:
 - **Sheets API**: Required for reading/writing spreadsheets
 - **Drive API**: Required for file operations
 - **Folder access**: Share only specific folders, not entire Drive
+- **Shared Drive (recommended)**: Use a Shared Drive for team-wide access and easier permission management
 
 ---
 
